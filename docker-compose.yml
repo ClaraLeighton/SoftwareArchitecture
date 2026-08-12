@@ -1,0 +1,15 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: book_reviews_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-seed:/seed:ro
+    environment:
+      MONGO_INITDB_DATABASE: book_reviews
+
+volumes:
+  mongodb_data:
