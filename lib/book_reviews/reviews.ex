@@ -25,15 +25,16 @@ defmodule BookReviews.Reviews do
   end
 
   def create_review(attrs) do
-    doc = %{
-      book_id: BSON.ObjectId.decode!(attrs["book_id"]),
-      review: attrs["review"],
-      score: String.to_integer(attrs["score"] || "3"),
-      upvotes: String.to_integer(attrs["upvotes"] || "0")
-    }
+    with {:ok, book_id} <- parse_object_id(attrs["book_id"]),
+         {:ok, score} <- parse_integer(attrs["score"] || "3", 1, 5),
+         {:ok, upvotes} <- parse_integer(attrs["upvotes"] || "0", 0, nil) do
+      doc = %{book_id: book_id, review: attrs["review"], score: score, upvotes: upvotes}
 
-    case MongoRepo.insert_one(@collection, doc) do
-      {:ok, result} -> {:ok, Map.put(doc, "_id", result.inserted_id)}
+      case MongoRepo.insert_one(@collection, doc) do
+        {:ok, result} -> {:ok, Map.put(doc, "_id", result.inserted_id)}
+        {:error, reason} -> {:error, reason}
+      end
+    else
       {:error, reason} -> {:error, reason}
     end
   end
@@ -41,11 +42,16 @@ defmodule BookReviews.Reviews do
   def update_review(%{"_id" => id} = _review, attrs) do
     oid = ensure_object_id(id)
     filter = %{"_id" => oid}
-    update = %{"$set" => build_update_fields(attrs)}
 
-    case MongoRepo.update_one(@collection, filter, update) do
-      {:ok, _} -> {:ok, get_review!(id)}
-      {:error, reason} -> {:error, reason}
+    case build_update_fields(attrs) do
+      {:ok, fields} ->
+        case MongoRepo.update_one(@collection, filter, %{"$set" => fields}) do
+          {:ok, _} -> {:ok, get_review!(id)}
+          {:error, reason} -> {:error, reason}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -63,13 +69,33 @@ defmodule BookReviews.Reviews do
   defp ensure_object_id(id), do: id
 
   defp build_update_fields(attrs) do
-    %{}
-    |> maybe_put("review", attrs["review"])
-    |> maybe_put("score", if(attrs["score"], do: String.to_integer(attrs["score"]), else: nil))
-    |> maybe_put(
-      "upvotes",
-      if(attrs["upvotes"], do: String.to_integer(attrs["upvotes"]), else: nil)
-    )
+    with {:ok, score_fields} <- optional_integer(attrs, "score", 1, 5),
+         {:ok, upvote_fields} <- optional_integer(attrs, "upvotes", 0, nil) do
+      {:ok, score_fields |> Map.merge(upvote_fields) |> maybe_put("review", attrs["review"])}
+    end
+  end
+
+  defp optional_integer(attrs, key, min, max) do
+    case attrs[key] do
+      nil -> {:ok, %{}}
+      "" -> {:ok, %{}}
+      value -> with {:ok, number} <- parse_integer(value, min, max), do: {:ok, %{key => number}}
+    end
+  end
+
+  defp parse_object_id(nil), do: {:error, :invalid_book}
+
+  defp parse_object_id(id) do
+    {:ok, BSON.ObjectId.decode!(id)}
+  rescue
+    ArgumentError -> {:error, :invalid_book}
+  end
+
+  defp parse_integer(value, min, max) do
+    case Integer.parse(to_string(value)) do
+      {number, ""} when number >= min and (is_nil(max) or number <= max) -> {:ok, number}
+      _ -> {:error, :invalid_number}
+    end
   end
 
   defp maybe_put(map, _key, nil), do: map
