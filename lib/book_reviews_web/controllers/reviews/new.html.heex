@@ -1,0 +1,52 @@
+<h1 class="text-2xl font-bold mb-4">New Review</h1>
+
+<.link href={~p"/reviews"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Reviews</.link>
+
+<.form for={%{}} action={~p"/reviews"} method="post" class="space-y-4">
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Book</label>
+    <select
+      name="review[book_id]"
+      required
+      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    >
+      <option value="">Select a book</option>
+      <%= for book <- @books do %>
+        <option value={id_to_string(book["_id"])}>{book["title"]}</option>
+      <% end %>
+    </select>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Score (1-5)</label>
+    <input
+      type="number"
+      name="review[score]"
+      min="1"
+      max="5"
+      value="3"
+      required
+      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    />
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Upvotes</label>
+    <input
+      type="number"
+      name="review[upvotes]"
+      value="0"
+      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    />
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Review</label>
+    <textarea
+      name="review[review]"
+      rows="3"
+      required
+      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    ></textarea>
+  </div>
+  <div>
+    <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Create Review</button>
+  </div>
+</.form>

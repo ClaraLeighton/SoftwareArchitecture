@@ -1,0 +1,50 @@
+<h1 class="text-2xl font-bold mb-4">Edit Sale Entry</h1>
+
+<.link href={~p"/sales"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Sales</.link>
+
+<.form for={%{}} action={~p"/sales/#{id_to_string(@sale["_id"])}"} method="post" class="space-y-4">
+  <input type="hidden" name="_method" value="put" />
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Book</label>
+    <select
+      name="sale[book_id]"
+      required
+      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    >
+      <option value="">Select a book</option>
+      <%= for book <- @books do %>
+        <option
+          value={id_to_string(book["_id"])}
+          selected={id_to_string(book["_id"]) == id_to_string(@sale["book_id"])}
+        >
+          {book["title"]}
+        </option>
+      <% end %>
+    </select>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Year</label>
+    <input
+      type="number"
+      name="sale[year]"
+      min="1900"
+      max="2099"
+      value={@sale["year"]}
+      required
+      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    />
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Sales</label>
+    <input
+      type="number"
+      name="sale[sales]"
+      value={@sale["sales"]}
+      required
+      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    />
+  </div>
+  <div>
+    <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Update Sale Entry</button>
+  </div>
+</.form>

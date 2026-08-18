@@ -1,0 +1,138 @@
+<h1 class="text-2xl font-bold mb-4">Authors</h1>
+
+<.link
+  href={~p"/authors/new"}
+  class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 mb-4 inline-block"
+>
+  New Author
+</.link>
+
+<div class="mb-4 p-4 bg-gray-50 rounded">
+  <form method="get" action="/authors" class="flex gap-4 items-end">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Name</label>
+      <input
+        type="text"
+        name="name"
+        value={@filters["name"]}
+        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+      />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Country</label>
+      <input
+        type="text"
+        name="country"
+        value={@filters["country"]}
+        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+      />
+    </div>
+    <input type="hidden" name="sort" value={@sort_field} />
+    <input type="hidden" name="dir" value={@sort_dir} />
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Filter</button>
+  </form>
+</div>
+
+<div class="overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <a
+            href={"/authors?sort=name&dir=#{if @sort_field == "name" && @sort_dir == "desc", do: "asc", else: "desc"}&name=#{@filters["name"]}&country=#{@filters["country"]}"}
+            class="hover:underline"
+          >
+            Name {if @sort_field == "name",
+              do: if(@sort_dir == "desc", do: " ↓", else: " ↑"),
+              else: ""}
+          </a>
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <a
+            href={"/authors?sort=country&dir=#{if @sort_field == "country" && @sort_dir == "desc", do: "asc", else: "desc"}&name=#{@filters["name"]}&country=#{@filters["country"]}"}
+            class="hover:underline"
+          >
+            Country {if @sort_field == "country",
+              do: if(@sort_dir == "desc", do: " ↓", else: " ↑"),
+              else: ""}
+          </a>
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <a
+            href={"/authors?sort=books&dir=#{if @sort_field == "books" && @sort_dir == "desc", do: "asc", else: "desc"}&name=#{@filters["name"]}&country=#{@filters["country"]}"}
+            class="hover:underline"
+          >
+            Books {if @sort_field == "books",
+              do: if(@sort_dir == "desc", do: " ↓", else: " ↑"),
+              else: ""}
+          </a>
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <a
+            href={"/authors?sort=avgScore&dir=#{if @sort_field == "avgScore" && @sort_dir == "desc", do: "asc", else: "desc"}&name=#{@filters["name"]}&country=#{@filters["country"]}"}
+            class="hover:underline"
+          >
+            Avg Score {if @sort_field == "avgScore",
+              do: if(@sort_dir == "desc", do: " ↓", else: " ↑"),
+              else: ""}
+          </a>
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <a
+            href={"/authors?sort=totalSales&dir=#{if @sort_field == "totalSales" && @sort_dir == "desc", do: "asc", else: "desc"}&name=#{@filters["name"]}&country=#{@filters["country"]}"}
+            class="hover:underline"
+          >
+            Total Sales {if @sort_field == "totalSales",
+              do: if(@sort_dir == "desc", do: " ↓", else: " ↑"),
+              else: ""}
+          </a>
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Actions
+        </th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      <%= for author <- @authors do %>
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <.link
+              href={~p"/authors/#{id_to_string(author["_id"])}"}
+              class="text-indigo-600 hover:text-indigo-900"
+            >
+              {author["name"]}
+            </.link>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {author["country"]}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {author["books"]}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {author["avgScore"] || "N/A"}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {format_number(author["totalSales"])}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <.link
+              href={~p"/authors/#{id_to_string(author["_id"])}"}
+              class="text-indigo-600 hover:text-indigo-900 mr-3"
+            >Show</.link>
+            <.link
+              href={~p"/authors/#{id_to_string(author["_id"])}/edit"}
+              class="text-amber-600 hover:text-amber-900 mr-3"
+            >Edit</.link>
+            <.link
+              href={~p"/authors/#{id_to_string(author["_id"])}"}
+              method="delete"
+              data-confirm="Are you sure?"
+              class="text-red-600 hover:text-red-900"
+            >Delete</.link>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

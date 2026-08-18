@@ -1,0 +1,70 @@
+<h1 class="text-2xl font-bold mb-4">Book Details</h1>
+
+<.link href={~p"/books"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Books</.link>
+
+<div class="bg-white shadow rounded-lg p-6">
+  <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Title</dt>
+      <dd class="mt-1 text-sm text-gray-900">{@book["title"]}</dd>
+    </div>
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Author</dt>
+      <dd class="mt-1 text-sm">
+        <.link
+          href={~p"/authors/#{BSON.ObjectId.encode!(@book["author_id"])}"}
+          class="text-indigo-600 hover:text-indigo-900"
+        >
+          {@author["name"]}
+        </.link>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Published Date</dt>
+      <dd class="mt-1 text-sm text-gray-900">{format_date(@book["published_date"])}</dd>
+    </div>
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Total Sales</dt>
+      <dd class="mt-1 text-sm text-gray-900">{format_number(@book["sales"])}</dd>
+    </div>
+    <div class="sm:col-span-2">
+      <dt class="text-sm font-medium text-gray-500">Summary</dt>
+      <dd class="mt-1 text-sm text-gray-900">{@book["summary"]}</dd>
+    </div>
+  </dl>
+</div>
+
+<div class="mt-4 flex gap-2">
+  <.link
+    href={~p"/books/#{id_to_string(@book["_id"])}/edit"}
+    class="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600"
+  >Edit</.link>
+  <.link
+    href={~p"/books/#{id_to_string(@book["_id"])}"}
+    method="delete"
+    data-confirm="Are you sure?"
+    class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+  >Delete</.link>
+</div>
+
+<div class="mt-8">
+  <h2 class="text-xl font-bold mb-4">Reviews ({length(@reviews)})</h2>
+
+  <%= if @reviews == [] do %>
+    <p class="text-gray-500">No reviews yet.</p>
+  <% else %>
+    <div class="space-y-4">
+      <%= for review <- @reviews do %>
+        <div class="bg-white shadow rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-yellow-500">{score_stars(review["score"])}</span>
+            <span class="text-sm text-gray-500">
+              {review["upvotes"]} upvote{if review["upvotes"] != 1, do: "s"}
+            </span>
+          </div>
+          <p class="text-sm text-gray-700">{review["review"]}</p>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

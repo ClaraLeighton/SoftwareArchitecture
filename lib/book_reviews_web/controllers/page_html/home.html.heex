@@ -1,0 +1,66 @@
+<h1 class="text-3xl font-bold text-indigo-700 mb-6">Welcome to Book Reviews</h1>
+
+<p class="text-gray-600 mb-8">
+  Manage authors, books, reviews, and sales data. Explore our analytics views to discover
+  top-rated books, best-selling titles, and more.
+</p>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <.link
+    href={~p"/authors"}
+    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+  >
+    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Authors</h3>
+    <p class="text-sm text-gray-500">Manage author profiles and view statistics</p>
+  </.link>
+
+  <.link
+    href={~p"/books"}
+    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+  >
+    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Books</h3>
+    <p class="text-sm text-gray-500">Browse and manage your book collection</p>
+  </.link>
+
+  <.link
+    href={~p"/reviews"}
+    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+  >
+    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Reviews</h3>
+    <p class="text-sm text-gray-500">Read and manage book reviews</p>
+  </.link>
+
+  <.link
+    href={~p"/sales"}
+    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+  >
+    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Sales</h3>
+    <p class="text-sm text-gray-500">Track sales data by year</p>
+  </.link>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <.link
+    href={~p"/books/top-rated"}
+    class="block p-6 bg-amber-50 rounded-lg shadow hover:shadow-lg transition-shadow"
+  >
+    <h3 class="text-lg font-semibold text-amber-700 mb-2">Top Rated Books</h3>
+    <p class="text-sm text-gray-500">Discover the highest-rated books of all time</p>
+  </.link>
+
+  <.link
+    href={~p"/books/top-selling"}
+    class="block p-6 bg-green-50 rounded-lg shadow hover:shadow-lg transition-shadow"
+  >
+    <h3 class="text-lg font-semibold text-green-700 mb-2">Top Selling Books</h3>
+    <p class="text-sm text-gray-500">See the best-selling titles and their performance</p>
+  </.link>
+
+  <.link
+    href={~p"/books/search"}
+    class="block p-6 bg-blue-50 rounded-lg shadow hover:shadow-lg transition-shadow"
+  >
+    <h3 class="text-lg font-semibold text-blue-700 mb-2">Search Books</h3>
+    <p class="text-sm text-gray-500">Find books by summary content</p>
+  </.link>
+</div>

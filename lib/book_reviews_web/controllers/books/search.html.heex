@@ -1,0 +1,86 @@
+<h1 class="text-2xl font-bold mb-4">Search Books</h1>
+
+<.link href={~p"/books"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Books</.link>
+
+<div class="mb-4 p-4 bg-gray-50 rounded">
+  <form method="get" action="/books/search" class="flex gap-4 items-end">
+    <div class="flex-1">
+      <label class="block text-sm font-medium text-gray-700">Search Terms (space-separated)</label>
+      <input
+        type="text"
+        name="q"
+        value={@query}
+        placeholder="e.g. mountain truth journalist"
+        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+      />
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
+  </form>
+</div>
+
+<%= if @query != "" do %>
+  <p class="text-sm text-gray-500 mb-4">
+    Found {@results.total} results for "{@query}"
+  </p>
+<% end %>
+
+<div class="overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Title
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Summary
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Published
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Sales
+        </th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      <%= for book <- @results.books do %>
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <.link
+              href={~p"/books/#{id_to_string(book["_id"])}"}
+              class="text-indigo-600 hover:text-indigo-900"
+            >
+              {book["title"]}
+            </.link>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-500 max-w-md truncate">
+            {book["summary"]}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {format_date(book["published_date"])}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {format_number(book["sales"])}
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<%= if @results.total_pages > 1 do %>
+  <div class="mt-4 flex justify-center gap-2">
+    <%= for page <- 1..@results.total_pages do %>
+      <.link
+        href={~p"/books/search?q=#{@query}&page=#{page}"}
+        class={"px-3 py-1 rounded #{if page == @results.page, do: "bg-indigo-600 text-white", else: "bg-gray-200 text-gray-700 hover:bg-gray-300"}"}
+      >
+        {page}
+      </.link>
+    <% end %>
+  </div>
+<% end %>
+
+<%= if @results.books == [] && @query != "" do %>
+  <p class="text-gray-500 text-center py-8">No books found matching your search.</p>
+<% end %>
