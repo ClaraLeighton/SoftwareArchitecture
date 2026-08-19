@@ -17,66 +17,52 @@ defmodule BookReviewsWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="bg-indigo-700 text-white shadow-lg">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex items-center">
-            <.link href="/" class="flex-shrink-0 flex items-center">
-              <span class="text-xl font-bold">Book Reviews</span>
-            </.link>
-          </div>
-          <nav class="flex items-center space-x-4">
-            <.link
-              href={~p"/authors"}
-              class="text-indigo-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Authors
-            </.link>
-            <.link
-              href={~p"/books"}
-              class="text-indigo-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Books
-            </.link>
-            <.link
-              href={~p"/reviews"}
-              class="text-indigo-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Reviews
-            </.link>
-            <.link
-              href={~p"/sales"}
-              class="text-indigo-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Sales
-            </.link>
-            <div class="border-l border-indigo-500 h-6 mx-2"></div>
-            <.link
-              href={~p"/books/top-rated"}
-              class="text-indigo-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Top Rated
-            </.link>
-            <.link
-              href={~p"/books/top-selling"}
-              class="text-indigo-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Top Selling
-            </.link>
-            <.link
-              href={~p"/books/search"}
-              class="text-indigo-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Search
-            </.link>
-          </nav>
-        </div>
+    <header class="border-b border-[#e4dfd8] bg-[#fbfaf8]/90 backdrop-blur-md">
+      <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+        <.link href="/" class="group flex items-center gap-3">
+          <span class="grid size-10 place-items-center rounded-xl bg-[#24211f] text-lg text-[#f7e8b1] shadow-sm transition-transform group-hover:-rotate-3">B</span>
+          <span>
+            <span class="block font-serif text-xl font-bold leading-none text-[#24211f]">Book Reviews</span>
+            <span class="mt-1 block text-[10px] font-bold uppercase tracking-[.22em] text-[#e86f51]">The reading room</span>
+          </span>
+        </.link>
+        <nav class="flex max-w-full items-center gap-1 overflow-x-auto text-sm font-semibold text-[#756f69]">
+          <.link
+            href={~p"/authors"}
+            class="whitespace-nowrap rounded-lg px-3 py-2 transition-colors hover:bg-[#f1eee9] hover:text-[#24211f]"
+          >Authors</.link>
+          <.link
+            href={~p"/books"}
+            class="whitespace-nowrap rounded-lg px-3 py-2 transition-colors hover:bg-[#f1eee9] hover:text-[#24211f]"
+          >Books</.link>
+          <.link
+            href={~p"/reviews"}
+            class="whitespace-nowrap rounded-lg px-3 py-2 transition-colors hover:bg-[#f1eee9] hover:text-[#24211f]"
+          >Reviews</.link>
+          <.link
+            href={~p"/sales"}
+            class="whitespace-nowrap rounded-lg px-3 py-2 transition-colors hover:bg-[#f1eee9] hover:text-[#24211f]"
+          >Sales</.link>
+          <span class="mx-1 hidden h-5 border-l border-[#e4dfd8] sm:block"></span>
+          <.link
+            href={~p"/books/top-rated"}
+            class="whitespace-nowrap rounded-lg px-3 py-2 transition-colors hover:bg-[#f7e8b1] hover:text-[#24211f]"
+          >Top rated</.link>
+          <.link
+            href={~p"/books/top-selling"}
+            class="whitespace-nowrap rounded-lg px-3 py-2 transition-colors hover:bg-[#dce8df] hover:text-[#24211f]"
+          >Top selling</.link>
+          <.link
+            href={~p"/books/search"}
+            class="whitespace-nowrap rounded-lg px-3 py-2 transition-colors hover:bg-[#e6e0f0] hover:text-[#24211f]"
+          >Search</.link>
+        </nav>
       </div>
     </header>
 
     <.flash_group flash={@flash} />
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {render_slot(@inner_block)}
     </main>
     """

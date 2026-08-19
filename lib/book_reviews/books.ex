@@ -21,16 +21,21 @@ defmodule BookReviews.Books do
   end
 
   def create_book(attrs) do
-    doc = %{
-      title: attrs["title"],
-      summary: attrs["summary"],
-      published_date: parse_date(attrs["published_date"]),
-      sales: String.to_integer(attrs["sales"] || "0"),
-      author_id: BSON.ObjectId.decode!(attrs["author_id"])
-    }
+    with {:ok, sales} <- parse_integer(attrs["sales"] || "0", 0),
+         {:ok, author_id} <- parse_object_id(attrs["author_id"]) do
+      doc = %{
+        title: attrs["title"],
+        summary: attrs["summary"],
+        published_date: parse_date(attrs["published_date"]),
+        sales: sales,
+        author_id: author_id
+      }
 
-    case MongoRepo.insert_one(@collection, doc) do
-      {:ok, result} -> {:ok, Map.put(doc, "_id", result.inserted_id)}
+      case MongoRepo.insert_one(@collection, doc) do
+        {:ok, result} -> {:ok, Map.put(doc, "_id", result.inserted_id)}
+        {:error, reason} -> {:error, reason}
+      end
+    else
       {:error, reason} -> {:error, reason}
     end
   end
@@ -38,11 +43,16 @@ defmodule BookReviews.Books do
   def update_book(%{"_id" => id} = _book, attrs) do
     oid = ensure_object_id(id)
     filter = %{"_id" => oid}
-    update = %{"$set" => build_update_fields(attrs)}
 
-    case MongoRepo.update_one(@collection, filter, update) do
-      {:ok, _} -> {:ok, get_book!(id)}
-      {:error, reason} -> {:error, reason}
+    case build_update_fields(attrs) do
+      {:ok, fields} ->
+        case MongoRepo.update_one(@collection, filter, %{"$set" => fields}) do
+          {:ok, _} -> {:ok, get_book!(id)}
+          {:error, reason} -> {:error, reason}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -191,8 +201,8 @@ defmodule BookReviews.Books do
            projection: %{"published_date" => 1}
          ) do
       nil -> nil
-      %{"published_date" => %DateTime{} = dt} -> DateTime.to_date(dt) |> Date.year_of_era()
-      %{"published_date" => %Date{} = d} -> Date.year_of_era(d)
+      %{"published_date" => %DateTime{} = dt} -> dt.year
+      %{"published_date" => %Date{} = d} -> d.year
       _ -> nil
     end
   end
@@ -202,15 +212,47 @@ defmodule BookReviews.Books do
   defp ensure_object_id(id), do: id
 
   defp build_update_fields(attrs) do
-    %{}
-    |> maybe_put("title", attrs["title"])
-    |> maybe_put("summary", attrs["summary"])
-    |> maybe_put("published_date", parse_date(attrs["published_date"]))
-    |> maybe_put("sales", if(attrs["sales"], do: String.to_integer(attrs["sales"]), else: nil))
-    |> maybe_put(
-      "author_id",
-      if(attrs["author_id"], do: BSON.ObjectId.decode!(attrs["author_id"]), else: nil)
-    )
+    with {:ok, sales_fields} <- optional_integer(attrs, "sales", 0),
+         {:ok, author_fields} <- optional_object_id(attrs, "author_id") do
+      fields =
+        sales_fields
+        |> Map.merge(author_fields)
+        |> maybe_put("title", attrs["title"])
+        |> maybe_put("summary", attrs["summary"])
+
+      {:ok, maybe_put(fields, "published_date", parse_date(attrs["published_date"]))}
+    end
+  end
+
+  defp optional_integer(attrs, key, min) do
+    case attrs[key] do
+      nil -> {:ok, %{}}
+      "" -> {:ok, %{}}
+      value -> with {:ok, number} <- parse_integer(value, min), do: {:ok, %{key => number}}
+    end
+  end
+
+  defp optional_object_id(attrs, key) do
+    case attrs[key] do
+      nil -> {:ok, %{}}
+      "" -> {:ok, %{}}
+      value -> with {:ok, id} <- parse_object_id(value), do: {:ok, %{key => id}}
+    end
+  end
+
+  defp parse_object_id(nil), do: {:error, :invalid_author}
+
+  defp parse_object_id(id) do
+    {:ok, BSON.ObjectId.decode!(id)}
+  rescue
+    ArgumentError -> {:error, :invalid_author}
+  end
+
+  defp parse_integer(value, min) do
+    case Integer.parse(to_string(value)) do
+      {number, ""} when number >= min -> {:ok, number}
+      _ -> {:error, :invalid_number}
+    end
   end
 
   defp maybe_put(map, _key, nil), do: map

@@ -1,66 +1,114 @@
-<h1 class="text-3xl font-bold text-indigo-700 mb-6">Welcome to Book Reviews</h1>
+<section class="mb-12 grid gap-8 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
+  <div>
+    <p class="mb-4 text-xs font-bold uppercase tracking-[.24em] text-[#e86f51]">
+      A quiet place for loud ideas
+    </p>
+    <h1 class="max-w-3xl text-5xl font-bold leading-[.98] text-[#24211f] sm:text-6xl">
+      Make space for the books that stay with you.
+    </h1>
+    <p class="mt-6 max-w-xl text-lg leading-8 text-[#756f69]">
+      Organize your library, follow the conversation, and discover the titles shaping your reading room.
+    </p>
+  </div>
+  <div class="rounded-2xl bg-[#24211f] p-7 text-[#fbfaf8] shadow-xl shadow-[#24211f]/10">
+    <span class="text-4xl text-[#f7e8b1]">“</span>
+    <p class="mt-2 font-serif text-2xl leading-tight">
+      A reader lives a thousand lives before he dies.
+    </p>
+    <p class="mt-5 text-xs font-bold uppercase tracking-[.18em] text-[#dce8df]">
+      George R. R. Martin
+    </p>
+  </div>
+</section>
 
-<p class="text-gray-600 mb-8">
-  Manage authors, books, reviews, and sales data. Explore our analytics views to discover
-  top-rated books, best-selling titles, and more.
-</p>
+<div class="mb-4 flex items-end justify-between">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[.2em] text-[#756f69]">Your workspace</p>
+    <h2 class="mt-1 text-3xl font-bold text-[#24211f]">Keep exploring</h2>
+  </div>
+  <span class="hidden text-sm text-[#756f69] sm:block">Seven ways into the collection</span>
+</div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
   <.link
     href={~p"/authors"}
-    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+    class="group rounded-2xl border border-[#e4dfd8] bg-white/80 p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
   >
-    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Authors</h3>
-    <p class="text-sm text-gray-500">Manage author profiles and view statistics</p>
+    <span class="mb-10 block text-3xl">✦</span>
+    <h3 class="mb-2 text-xl font-bold text-[#24211f]">Authors</h3>
+    <p class="text-sm leading-6 text-[#756f69]">
+      Profiles, publishing history, and the people behind the pages.
+    </p>
   </.link>
 
   <.link
     href={~p"/books"}
-    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+    class="group rounded-2xl border border-[#e4dfd8] bg-[#e6e0f0] p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
   >
-    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Books</h3>
-    <p class="text-sm text-gray-500">Browse and manage your book collection</p>
+    <span class="mb-10 block text-3xl">▤</span>
+    <h3 class="mb-2 text-xl font-bold text-[#24211f]">Books</h3>
+    <p class="text-sm leading-6 text-[#756f69]">
+      Browse and manage every title in your collection.
+    </p>
   </.link>
 
   <.link
     href={~p"/reviews"}
-    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+    class="group rounded-2xl border border-[#e4dfd8] bg-[#f7e8b1] p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
   >
-    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Reviews</h3>
-    <p class="text-sm text-gray-500">Read and manage book reviews</p>
+    <span class="mb-10 block text-3xl">✎</span>
+    <h3 class="mb-2 text-xl font-bold text-[#24211f]">Reviews</h3>
+    <p class="text-sm leading-6 text-[#756f69]">
+      Read the notes, scores, and conversations around each book.
+    </p>
   </.link>
 
   <.link
     href={~p"/sales"}
-    class="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+    class="group rounded-2xl border border-[#e4dfd8] bg-[#dce8df] p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
   >
-    <h3 class="text-lg font-semibold text-indigo-700 mb-2">Sales</h3>
-    <p class="text-sm text-gray-500">Track sales data by year</p>
+    <span class="mb-10 block text-3xl">↗</span>
+    <h3 class="mb-2 text-xl font-bold text-[#24211f]">Sales</h3>
+    <p class="text-sm leading-6 text-[#756f69]">
+      Track the momentum of every title year by year.
+    </p>
   </.link>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
   <.link
     href={~p"/books/top-rated"}
-    class="block p-6 bg-amber-50 rounded-lg shadow hover:shadow-lg transition-shadow"
+    class="group rounded-2xl border border-[#e4dfd8] bg-white/70 p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
   >
-    <h3 class="text-lg font-semibold text-amber-700 mb-2">Top Rated Books</h3>
-    <p class="text-sm text-gray-500">Discover the highest-rated books of all time</p>
+    <h3 class="mb-2 text-xl font-bold text-[#24211f]">
+      Top Rated Books <span class="text-[#e86f51]">↗</span>
+    </h3>
+    <p class="text-sm leading-6 text-[#756f69]">
+      The books readers return to, ranked by their strongest reviews.
+    </p>
   </.link>
 
   <.link
     href={~p"/books/top-selling"}
-    class="block p-6 bg-green-50 rounded-lg shadow hover:shadow-lg transition-shadow"
+    class="group rounded-2xl border border-[#e4dfd8] bg-white/70 p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
   >
-    <h3 class="text-lg font-semibold text-green-700 mb-2">Top Selling Books</h3>
-    <p class="text-sm text-gray-500">See the best-selling titles and their performance</p>
+    <h3 class="mb-2 text-xl font-bold text-[#24211f]">
+      Top Selling Books <span class="text-[#e86f51]">↗</span>
+    </h3>
+    <p class="text-sm leading-6 text-[#756f69]">
+      See which titles moved the most copies and when they peaked.
+    </p>
   </.link>
 
   <.link
     href={~p"/books/search"}
-    class="block p-6 bg-blue-50 rounded-lg shadow hover:shadow-lg transition-shadow"
+    class="group rounded-2xl border border-[#e4dfd8] bg-white/70 p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
   >
-    <h3 class="text-lg font-semibold text-blue-700 mb-2">Search Books</h3>
-    <p class="text-sm text-gray-500">Find books by summary content</p>
+    <h3 class="mb-2 text-xl font-bold text-[#24211f]">
+      Search Books <span class="text-[#e86f51]">↗</span>
+    </h3>
+    <p class="text-sm leading-6 text-[#756f69]">
+      Find a title by the ideas, places, and questions in its summary.
+    </p>
   </.link>
 </div>

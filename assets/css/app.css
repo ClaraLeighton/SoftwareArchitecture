@@ -14,14 +14,14 @@
 @plugin "../vendor/heroicons";
 
 /* daisyUI Tailwind Plugin. */
-@plugin "daisyui/packages/bundle/daisyui" {
+@plugin "daisyui" {
   themes: false;
 }
 
 /* daisyUI theme plugin.
   We ship with two themes, a light one inspired on Phoenix colors and a dark one inspired
   on Elixir colors. Build your own at: https://daisyui.com/theme-generator/ */
-@plugin "daisyui/packages/bundle/daisyui-theme" {
+@plugin "daisyui/theme" {
   name: "dark";
   default: false;
   prefersdark: true;
@@ -56,7 +56,7 @@
   --noise: 0;
 }
 
-@plugin "daisyui/packages/bundle/daisyui-theme" {
+@plugin "daisyui/theme" {
   name: "light";
   default: true;
   prefersdark: false;
@@ -103,3 +103,141 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+:root {
+  --ink: #24211f;
+  --muted-ink: #756f69;
+  --paper: #fbfaf8;
+  --paper-deep: #f1eee9;
+  --line: #e4dfd8;
+  --coral: #e86f51;
+  --coral-deep: #c9533b;
+  --sage: #dce8df;
+  --lavender: #e6e0f0;
+  --yellow: #f7e8b1;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(230, 224, 240, .7), transparent 26rem),
+    linear-gradient(180deg, #fbfaf8 0%, #f5f2ed 100%);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0;
+}
+
+main {
+  min-height: calc(100vh - 5rem);
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .74);
+  box-shadow: 0 12px 35px rgba(59, 49, 40, .06);
+}
+
+table thead {
+  background: var(--paper-deep) !important;
+}
+
+table thead th {
+  color: var(--muted-ink) !important;
+  border-bottom: 1px solid var(--line);
+  letter-spacing: .08em;
+}
+
+table tbody {
+  background: transparent !important;
+}
+
+table tbody tr {
+  transition: background-color .2s ease, transform .2s ease;
+}
+
+table tbody tr:hover {
+  background: rgba(247, 232, 177, .24);
+}
+
+table tbody td {
+  border-color: var(--line) !important;
+  color: var(--muted-ink);
+}
+
+table a {
+  color: var(--coral-deep) !important;
+  font-weight: 650;
+}
+
+input, select, textarea {
+  border-color: var(--line) !important;
+  background: rgba(255, 255, 255, .85) !important;
+  color: var(--ink) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(59, 49, 40, .04) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--coral) !important;
+  outline: 3px solid rgba(232, 111, 81, .16);
+  box-shadow: none !important;
+}
+
+button, .btn {
+  border-radius: 10px !important;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+
+button:hover, .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(59, 49, 40, .12);
+}
+
+/* Keep the older CRUD templates in the same visual language. */
+.bg-purple-600, .bg-blue-600 {
+  background-color: var(--coral) !important;
+}
+
+.hover\:bg-purple-700:hover, .hover\:bg-blue-700:hover {
+  background-color: var(--coral-deep) !important;
+}
+
+.bg-gray-50 {
+  background-color: var(--paper-deep) !important;
+}
+
+.text-indigo-700, .text-indigo-600, .text-blue-600, .text-amber-700 {
+  color: var(--coral-deep) !important;
+}
+
+.text-gray-500, .text-gray-600, .text-gray-700 {
+  color: var(--muted-ink) !important;
+}
+
+.workspace-panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .7);
+  box-shadow: 0 12px 35px rgba(59, 49, 40, .06);
+}
+
+@media (max-width: 640px) {
+  main {
+    padding-top: 1.5rem !important;
+  }
+
+  table {
+    min-width: 680px;
+  }
+}

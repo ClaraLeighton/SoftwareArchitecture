@@ -5,11 +5,20 @@ defmodule BookReviewsWeb.AuthorController do
 
   def index(conn, params) do
     sort_field = Map.get(params, "sort", "totalSales")
+
+    sort_field =
+      if sort_field in ~w(name country books avgScore totalSales),
+        do: sort_field,
+        else: "totalSales"
+
     sort_dir = if Map.get(params, "dir", "desc") == "asc", do: 1, else: -1
 
     filters = %{
       "name" => Map.get(params, "name", ""),
-      "country" => Map.get(params, "country", "")
+      "country" => Map.get(params, "country", ""),
+      "books" => Map.get(params, "books", ""),
+      "avgScore" => Map.get(params, "avgScore", ""),
+      "totalSales" => Map.get(params, "totalSales", "")
     }
 
     authors = Authors.list_authors_with_stats(sort_field, sort_dir, filters)

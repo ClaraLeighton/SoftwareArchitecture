@@ -1,5 +1,68 @@
 # Running & Testing BookReviews
 
+## What needs to be installed
+
+This project has three layers. You do not need to install Phoenix or MongoDB globally.
+
+- **Docker Desktop** runs MongoDB 7 in the `book_reviews_mongodb` container. MongoDB is exposed on `localhost:27017`.
+- **mise** selects the exact language versions declared by the project: Elixir `1.17.3` and Erlang/OTP `26.2.5.6`.
+- **Mix** is Elixir's build tool. `mix deps.get` downloads Phoenix, LiveView, MongoDB Driver, Tailwind, esbuild, DaisyUI support and the other packages declared in `mix.exs`.
+- **Node.js and npm** build the frontend assets. The only npm package declared by this project is DaisyUI `5.5.20` in `assets/package.json`.
+- **Git** is only needed to clone or update the repository.
+
+On macOS, install the missing system tools with Homebrew:
+
+```bash
+brew install mise
+```
+
+Docker Desktop must be installed and open before starting MongoDB. Node.js, npm, Docker and Homebrew are already available on the current machine; `mise` is the missing tool.
+
+After installing mise, add its activation to zsh once:
+
+```bash
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+## First-time setup
+
+Run every command from the repository root, the directory containing `mix.exs`:
+
+```bash
+cd /Users/claraleighton/Documents/202620/SoftwareArchitecture/Assignment1/SoftwareArchitecture
+
+# Select and install Elixir 1.17.3 and Erlang/OTP 26.2.5.6
+mise install
+
+# Download and start MongoDB 7
+docker compose up -d
+
+# Download Elixir/Phoenix dependencies
+mix deps.get
+
+# Download DaisyUI and prepare Tailwind/esbuild
+cd assets
+npm install
+cd ..
+
+# Build the frontend assets
+mix assets.build
+
+# Load mock data: 50 authors, 300 books, reviews and yearly sales
+./mongo-seed/seed.sh
+```
+
+If Mix asks to install Hex or Rebar, accept it. If it does not offer the prompt, run this once:
+
+```bash
+mix local.hex --force
+mix local.rebar --force
+mix deps.get
+```
+
+The seed script must run **after** `docker compose up -d`, because it executes `mongosh` inside the MongoDB container. It is safe to run again when you want to regenerate the mock database.
+
 ## Prerequisites
 
 - Docker (for MongoDB)
@@ -116,14 +179,14 @@ Standard CRUD for authors. Create requires Name, Birth Date, Country, and Bio. S
 
 ### Search — `/books/search`
 
-**What it shows:** A search interface that finds books by keywords in their **summary** field. Supports space-separated terms (all must match). Results are paginated (10 per page).
+**What it shows:** A search interface that finds books by keywords in their **summary** field. Supports space-separated terms (any term can match). Results are paginated (10 per page).
 
 **How to test:**
 
 | Action | Steps |
 |---|---|
 | Basic search | Type a word like `mountain` or `adventure` and click **Search**. Results appear with a count (e.g. "Found 5 results"). |
-| Multi-term search | Type `mountain truth` (space-separated). Only books whose summary contains **both** words appear. |
+| Multi-term search | Type `mountain truth` (space-separated). Books whose summary contains either word appear. |
 | Empty search | Click **Search** with the field empty. The page loads without results. |
 | No results | Search for `xyznonexistent`. The message "No books found matching your search" appears. |
 | Pagination | If your search returns many results (more than 10), page number links appear at the bottom. Click page 2, 3, etc. The active page is highlighted in indigo. |

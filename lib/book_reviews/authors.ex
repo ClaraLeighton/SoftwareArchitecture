@@ -57,6 +57,10 @@ defmodule BookReviews.Authors do
     country_filter =
       if filters["country"] != "" and filters["country"] != nil, do: filters["country"], else: nil
 
+    books_filter = numeric_filter(filters["books"])
+    avg_score_filter = numeric_filter(filters["avgScore"])
+    total_sales_filter = numeric_filter(filters["totalSales"])
+
     match_stage =
       cond do
         name_filter && country_filter ->
@@ -120,7 +124,22 @@ defmodule BookReviews.Authors do
       ]
       |> Enum.reject(&is_nil/1)
 
-    pipeline = if match_stage, do: List.insert_at(pipeline, 0, match_stage), else: pipeline
+    stats_filters =
+      %{}
+      |> maybe_filter("books", books_filter)
+      |> maybe_filter("avgScore", avg_score_filter)
+      |> maybe_filter("totalSales", total_sales_filter)
+
+    pipeline =
+      pipeline
+      |> then(fn stages ->
+        if match_stage, do: List.insert_at(stages, 0, match_stage), else: stages
+      end)
+      |> then(fn stages ->
+        if stats_filters == %{},
+          do: stages,
+          else: List.insert_at(stages, -1, %{"$match" => stats_filters})
+      end)
 
     MongoRepo.aggregate(@collection, pipeline)
   end
@@ -128,6 +147,18 @@ defmodule BookReviews.Authors do
   def count_authors do
     MongoRepo.count(@collection)
   end
+
+  defp numeric_filter(value) when value in [nil, ""], do: nil
+
+  defp numeric_filter(value) do
+    case Integer.parse(value) do
+      {number, ""} -> number
+      _ -> nil
+    end
+  end
+
+  defp maybe_filter(filters, _field, nil), do: filters
+  defp maybe_filter(filters, field, value), do: Map.put(filters, field, value)
 
   defp ensure_object_id(%BSON.ObjectId{} = oid), do: oid
   defp ensure_object_id(id) when is_binary(id), do: BSON.ObjectId.decode!(id)
