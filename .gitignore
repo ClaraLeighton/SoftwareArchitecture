@@ -35,3 +35,9 @@ book_reviews-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# IDE
+.idea/
+
+# Agents
+AGENTS.md
+
