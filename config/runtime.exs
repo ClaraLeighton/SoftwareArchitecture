@@ -23,6 +23,11 @@ end
 config :book_reviews, BookReviewsWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# MongoDB connection string, overridable per environment (e.g. inside Docker
+# where the database is reached via the "mongodb" service name).
+config :book_reviews, :mongo_url,
+  System.get_env("MONGODB_URL", "mongodb://localhost:27017/book_reviews")
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :book_reviews, BookReviewsWeb.Endpoint,

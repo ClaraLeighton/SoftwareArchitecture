@@ -1,6 +1,33 @@
 # Running & Testing BookReviews
 
-## What needs to be installed
+## Quick start (Docker only)
+
+The whole system — Phoenix application and MongoDB database, each in its own container — starts with a single command:
+
+```bash
+docker compose up -d --build
+```
+
+Then open [http://localhost:4000](http://localhost:4000).
+
+On the very first start (empty `mongodb_data` volume), MongoDB automatically runs `mongo-seed/seed.js` and loads the mock data: 50 authors, 300 books, reviews and yearly sales. The app container waits for the database healthcheck before booting.
+
+Useful commands:
+
+```bash
+docker compose logs -f app        # follow application logs
+docker compose down               # stop everything (data is kept)
+docker compose down -v            # stop and wipe the database volume
+./mongo-seed/seed.sh              # re-seed / regenerate mock data
+```
+
+No local Elixir, Erlang, Node.js or mise installation is required for this path; only Docker.
+
+---
+
+## Local development setup
+
+### What needs to be installed
 
 This project has three layers. You do not need to install Phoenix or MongoDB globally.
 

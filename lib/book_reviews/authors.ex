@@ -91,15 +91,20 @@ defmodule BookReviews.Authors do
             "as" => "bs"
           }
         },
-        %{"$unwind" => "$bs"},
+        # Keep authors that have no books yet instead of dropping them.
+        %{"$unwind" => %{"path" => "$bs", "preserveNullAndEmptyArrays" => true}},
         %{
           "$group" => %{
             "_id" => "$_id",
             "name" => %{"$first" => "$name"},
             "country" => %{"$first" => "$country"},
-            "books" => %{"$sum" => 1},
+            "books" => %{
+              "$sum" => %{"$cond" => [%{"$ifNull" => ["$bs._id", false]}, 1, 0]}
+            },
             "totalSales" => %{"$sum" => "$bs.sales"},
-            "bookIds" => %{"$push" => "$bs._id"}
+            "bookIds" => %{
+              "$push" => %{"$cond" => [%{"$ifNull" => ["$bs._id", false]}, "$bs._id", "$$REMOVE"]}
+            }
           }
         },
         %{

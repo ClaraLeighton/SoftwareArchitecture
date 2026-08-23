@@ -1,4 +1,9 @@
 services:
+  # ---------------------------------------------------------------------------
+  # Database: MongoDB 7 in its own container.
+  # Data persists in the named volume; seed.js runs automatically on first
+  # start (empty volume) via /docker-entrypoint-initdb.d.
+  # ---------------------------------------------------------------------------
   mongodb:
     image: mongo:7
     container_name: book_reviews_mongodb
@@ -7,9 +12,38 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+      - ./mongo-seed/seed.js:/docker-entrypoint-initdb.d/seed.js:ro
       - ./mongo-seed:/seed:ro
     environment:
       MONGO_INITDB_DATABASE: book_reviews
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Application: Phoenix web app built from the local Dockerfile.
+  # Waits for MongoDB to be healthy before starting.
+  # ---------------------------------------------------------------------------
+  app:
+    build: .
+    container_name: book_reviews_app
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      PHX_SERVER: "true"
+      PHX_HOST: "localhost"
+      MONGODB_URL: mongodb://mongodb:27017/book_reviews
+      # Dev-only secret for this assignment; generate your own with
+      # `mix phx.gen.secret` before exposing the app publicly.
+      SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ
 
 volumes:
   mongodb_data:
