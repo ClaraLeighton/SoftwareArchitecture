@@ -40,6 +40,7 @@ services:
       PORT: "4000"
       PHX_SERVER: "true"
       PHX_HOST: "localhost"
+      FORCE_SSL: "false"
       MONGODB_URL: mongodb://mongodb:27017/book_reviews
       # Dev-only secret for this assignment; generate your own with
       # `mix phx.gen.secret` before exposing the app publicly.
