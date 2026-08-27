@@ -1,0 +1,92 @@
+# ---------------------------------------------------------------------------
+# MongoDB database
+# - PersistentVolumeClaim: data survives pod restarts and rescheduling
+# - Deployment: single replica
+# - Service: ClusterIP, only reachable inside the cluster
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-data
+  namespace: book-reviews
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  # Local clusters (k3d/minikube) provide a "standard" default StorageClass.
+  # On managed clouds set it explicitly, e.g. gp3 (EKS), standard-rwo (GKE),
+  # managed-csi (AKS). See k8s/README.md.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-reviews
+      component: database
+  template:
+    metadata:
+      labels:
+        app: book-reviews
+        component: database
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+            - name: seed
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mongodb-data
+        - name: seed
+          configMap:
+            name: mongo-seed
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: database
+spec:
+  type: ClusterIP
+  selector:
+    app: book-reviews
+    component: database
+  ports:
+    - port: 27017
+      targetPort: 27017

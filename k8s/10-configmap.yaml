@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: book-reviews
+data:
+  PORT: "4000"
+  PHX_HOST: "localhost"
+  # Points at the in-cluster MongoDB Service (mongodb.book-reviews.svc).
+  MONGODB_URL: "mongodb://mongodb.book-reviews.svc.cluster.local:27017/book_reviews"
+  # Disable force_ssl in local clusters where TLS is not terminated at the app.
+  FORCE_SSL: "false"

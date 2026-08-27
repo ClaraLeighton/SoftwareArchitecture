@@ -62,6 +62,19 @@ if config_env() == :prod do
 
   config :book_reviews, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Set FORCE_SSL=false in local clusters (k3d/minikube) where TLS is not
+  # terminated at the application.  In production behind a load balancer
+  # or ingress, leave it true (the default) so HSTS + redirect are active.
+  if System.get_env("FORCE_SSL", "true") != "false" do
+    config :book_reviews, BookReviewsWeb.Endpoint,
+      force_ssl: [
+        rewrite_on: [:x_forwarded_proto],
+        exclude: [
+          hosts: ["localhost", "127.0.0.1"]
+        ]
+      ]
+  end
+
   config :book_reviews, BookReviewsWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

@@ -1,0 +1,435 @@
+apiVersion: v1
+data:
+  seed.js: |
+    /*
+     * Seed script for the Book Review database (book_reviews).
+     *
+     * Populates:
+     *   - 50 authors
+     *   - 300 books
+     *   - 1..10 reviews per book
+     *   - 5..15 yearly sales rows per book
+     *
+     * The PRNG is seeded, so re-running the script produces the same data.
+     *
+     * Usage (from the repo root):
+     *   docker compose exec -T mongodb mongosh "mongodb://localhost:27017/book_reviews" < mongo-seed/seed.js
+     */
+
+    db = db.getSiblingDB('book_reviews');
+
+    const TOTAL_AUTHORS = 50;
+    const TOTAL_BOOKS = 300;
+
+    // ---------------------------------------------------------------------------
+    // Seeded PRNG (mulberry32) so the mock data is reproducible.
+    // ---------------------------------------------------------------------------
+    function mulberry32(seed) {
+      let a = seed >>> 0;
+      return function () {
+        a |= 0;
+        a = (a + 0x6d2b79f5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const rng = mulberry32(20240811);
+
+    // ---------------------------------------------------------------------------
+    // Word pools
+    // ---------------------------------------------------------------------------
+    const FIRST_NAMES = [
+      'James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda',
+      'David', 'Elizabeth', 'William', 'Barbara', 'Richard', 'Susan', 'Joseph',
+      'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen', 'Christopher', 'Nancy',
+      'Daniel', 'Lisa', 'Matthew', 'Betty', 'Anthony', 'Margaret', 'Mark', 'Sandra',
+      'Donald', 'Ashley', 'Steven', 'Kimberly', 'Paul', 'Emily', 'Andrew', 'Donna',
+      'Joshua', 'Michelle'
+    ];
+
+    const LAST_NAMES = [
+      'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+      'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson',
+      'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez',
+      'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis',
+      'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres',
+      'Nguyen', 'Hill', 'Flores'
+    ];
+
+    const COUNTRIES = [
+      'United States', 'United Kingdom', 'France', 'Germany', 'Spain', 'Italy',
+      'Japan', 'China', 'India', 'Brazil', 'Argentina', 'Mexico', 'Canada',
+      'Australia', 'Nigeria', 'Kenya', 'South Africa', 'Egypt', 'Russia', 'Poland',
+      'Sweden', 'Norway', 'Denmark', 'Netherlands', 'Portugal', 'Ireland', 'Greece',
+      'Turkey', 'Israel', 'South Korea'
+    ];
+
+    const GENRES = [
+      'literary fiction', 'science fiction', 'mystery', 'romance', 'historical',
+      'fantasy', 'thriller', 'adventure', 'poetry', 'non-fiction'
+    ];
+
+    const AWARDS = [
+      'the Booker Prize', 'the Pulitzer Prize', 'the National Book Award',
+      'the Hugo Award', 'the Nebula Award', 'the Nobel Prize in Literature',
+      'the Costa Book Award', 'the Pen/Faulkner Award'
+    ];
+
+    const THEMES = [
+      'identity', 'memory', 'loss', 'love', 'power', 'freedom', 'time', 'family',
+      'war', 'technology', 'nature', 'faith'
+    ];
+
+    const TITLE_ADJECTIVES = [
+      'Silent', 'Crimson', 'Golden', 'Fading', 'Broken', 'Hidden', 'Restless',
+      'Vanishing', 'Eternal', 'Shattered', 'Burning', 'Distant', 'Forgotten',
+      'Radiant', 'Hollow', 'Wandering', 'Bitter', 'Tender', 'Fierce', 'Quiet',
+      'Daring', 'Lonely', 'Wild', 'Sacred', 'Bleak', 'Miraculous', 'Strange',
+      'Frozen', 'Azure', 'Ironclad'
+    ];
+
+    const TITLE_NOUNS = [
+      'Harbor', 'Equation', 'Orchard', 'Chronicle', 'Horizon', 'Tapestry', 'Echo',
+      'River', 'Kingdom', 'Garden', 'Letter', 'Shadow', 'Symphony', 'Threshold',
+      'Maze', 'Prophecy', 'Autumn', 'Empire', 'Narrative', 'Cascade', 'Summit',
+      'Relic', 'Pendulum', 'Mirage', 'Archive', 'Borderland', 'Compass', 'Lantern',
+      'Voyage', 'Territory'
+    ];
+
+    const PLACES = [
+      'a coastal village', 'a bustling metropolis', 'a remote island',
+      'a war-torn city', 'a quiet suburb', 'an isolated mountain town',
+      'a desert outpost', 'a futuristic megacity', 'a medieval castle',
+      'a spaceship bound for deep space'
+    ];
+
+    const PROTAGONISTS = [
+      'a young cartographer', 'a retired detective', 'a struggling artist',
+      'an ambitious scientist', 'a widowed teacher', 'a runaway heir',
+      'a disillusioned soldier', 'a gifted pianist', 'a lighthouse keeper',
+      'an underground journalist'
+    ];
+
+    const ACTIONS = [
+      'uncovers a buried truth', 'pieces together a forgotten history',
+      'confronts a lifelong fear', 'rebuilds what was lost',
+      'chases a half-remembered dream', 'resists an encroaching order',
+      'charts an uncharted coast', 'betrays and is betrayed'
+    ];
+
+    const TWISTS = [
+      'the past was never what it seemed', 'the map leads somewhere impossible',
+      'the enemy is closer than expected', 'the treasure is a lie',
+      'the story is told backwards', 'the narrator is unreliable',
+      'the ending was written centuries ago'
+    ];
+
+    const SETTINGS = [
+      'the roaring twenties', 'a sunless winter', 'an industrial revolution',
+      'a quiet apocalypse', 'an age of exploration', 'a collapsing dynasty',
+      'a digital frontier', 'a divided kingdom'
+    ];
+
+    const QUESTIONS = [
+      'loyalty can survive betrayal', 'hope is a form of defiance',
+      'a single choice defines a life', 'the dead still have a voice',
+      'the truth is worth the cost', 'memory is a kind of history'
+    ];
+
+    const EVENTS = [
+      'uncovers a coded letter', 'loses everything in a single night',
+      'hears a rumor that changes the world', 'finds a door where none should be',
+      'inherits a home full of secrets'
+    ];
+
+    const CHOICE_PAIRS = [
+      ['the known path', 'the unknown road'],
+      ['safety', 'freedom'],
+      ['the family name', 'their own truth'],
+      ['duty', 'love'],
+      ['revenge', 'forgiveness'],
+      ['silence', 'testimony']
+    ];
+
+    const STAKES = [
+      'the city falls', 'the truth is lost forever', 'everything they love is erased',
+      'the balance of power shifts', 'the story ends unread'
+    ];
+
+    const SCORE_WORDS = [
+      'compelling', 'unforgettable', 'quiet', 'mesmerizing', 'uneven', 'gripping'
+    ];
+
+    const PRAISE = [
+      'The prose is beautiful.', 'The characters feel real.',
+      'The plot kept me guessing until the end.', 'An emotional gut-punch.',
+      'The pacing is perfect.', 'A masterclass in storytelling.',
+      'I think about it weeks later.', 'The ending left me breathless.'
+    ];
+
+    const CRITIQUE = [
+      'The middle section drags a bit.', 'Some plot points stretch credibility.',
+      'The ending felt rushed.', 'A few characters are underdeveloped.',
+      'The prose can be overwrought at times.', 'It is longer than it needs to be.'
+    ];
+
+    const EXTREME = ['riveting', 'transformative', 'heartbreaking', 'brilliant'];
+
+    // ---------------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------------
+    function pick(arr) {
+      return arr[Math.floor(rng() * arr.length)];
+    }
+
+    function randInt(min, max) {
+      return min + Math.floor(rng() * (max - min + 1));
+    }
+
+    function randDate(yearMin, yearMax) {
+      const year = randInt(yearMin, yearMax);
+      const month = randInt(1, 12);
+      const day = randInt(1, 28);
+      return new Date(Date.UTC(year, month - 1, day));
+    }
+
+    // Bias review scores toward the middle/high end: 1..5 weighted.
+    function randomScore() {
+      const r = rng();
+      if (r < 0.05) return 1;
+      if (r < 0.15) return 2;
+      if (r < 0.40) return 3;
+      if (r < 0.75) return 4;
+      return 5;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Generate authors
+    // ---------------------------------------------------------------------------
+    function generateAuthors() {
+      const usedNames = new Set();
+      const authors = [];
+
+      while (authors.length < TOTAL_AUTHORS) {
+        const name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
+        if (usedNames.has(name)) continue;
+        usedNames.add(name);
+
+        const firstName = name.split(' ')[0];
+        const birthDate = randDate(1930, 1998);
+        const country = pick(COUNTRIES);
+        const genre = pick(GENRES);
+        const bio =
+          `${name} is a ${genre} writer from ${country}. ` +
+          `Born in ${birthDate.getUTCFullYear()}, ${firstName} published their first ` +
+          `work at ${randInt(21, 45)} and has since been recognized with ${pick(AWARDS)}. ` +
+          `They are best known for blending ${pick(THEMES)} with ${pick(THEMES)}.`;
+
+        authors.push({
+          _id: new ObjectId(),
+          name,
+          date_of_birth: birthDate,
+          country,
+          bio
+        });
+      }
+      return authors;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Generate books
+    // ---------------------------------------------------------------------------
+    function generateSummaries() {
+      const genre = pick(GENRES);
+      const parts = [];
+      parts.push(
+        `In ${pick(PLACES)}, ${pick(PROTAGONISTS)} discovers that ${pick(TWISTS)}.`
+      );
+      parts.push(
+        `Set against the backdrop of ${pick(SETTINGS)}, this ${genre} novel follows ` +
+        `${pick(PROTAGONISTS)} as they ${pick(ACTIONS)}.`
+      );
+      if (rng() < 0.7) {
+        parts.push(
+          `A ${pick(SCORE_WORDS)} meditation on ${pick(THEMES)} and ${pick(THEMES)}, ` +
+          `the story asks whether ${pick(QUESTIONS)}.`
+        );
+      }
+      if (rng() < 0.5) {
+        const [choiceA, choiceB] = pick(CHOICE_PAIRS);
+        parts.push(
+          `When ${pick(PROTAGONISTS)} ${pick(EVENTS)}, they must choose between ` +
+          `${choiceA} and ${choiceB} before ${pick(STAKES)}.`
+        );
+      }
+      return parts.join(' ');
+    }
+
+    function generateBooks(authors) {
+      const usedTitles = new Set();
+      const books = [];
+
+      while (books.length < TOTAL_BOOKS) {
+        const title = `${pick(TITLE_ADJECTIVES)} ${pick(TITLE_NOUNS)}`;
+        if (usedTitles.has(title)) continue;
+        usedTitles.add(title);
+
+        books.push({
+          _id: new ObjectId(),
+          title,
+          summary: generateSummaries(),
+          published_date: randDate(1950, 2024),
+          sales: 0, // filled in by generateSales() before insert
+          author_id: pick(authors)._id
+        });
+      }
+      return books;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Generate reviews (1..10 per book)
+    // ---------------------------------------------------------------------------
+    function generateReviews(books) {
+      const reviews = [];
+      for (const book of books) {
+        const count = randInt(1, 10);
+        for (let i = 0; i < count; i++) {
+          const score = randomScore();
+          const scoreWord = pick(SCORE_WORDS);
+          const praise = pick(PRAISE);
+          const critique = pick(CRITIQUE);
+          let review;
+          const r = rng();
+          if (r < 0.25) {
+            review = `A ${scoreWord} read. ${praise}`;
+          } else if (r < 0.45) {
+            review = `I could not put this one down. ${praise}`;
+          } else if (r < 0.65) {
+            review = `${critique} Still, ${praise}`;
+          } else if (r < 0.8) {
+            review = `Absolutely ${pick(EXTREME)}. ${praise}`;
+          } else {
+            review = `${critique}`;
+          }
+          reviews.push({
+            _id: new ObjectId(),
+            book_id: book._id,
+            review,
+            score,
+            upvotes: randInt(0, 400)
+          });
+        }
+      }
+      return reviews;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Generate yearly sales (5..15 years per book, starting at publication year).
+    // Sets each book's total sales before the book is inserted.
+    // ---------------------------------------------------------------------------
+    function generateSales(books) {
+      const sales = [];
+      for (const book of books) {
+        const pubYear = book.published_date.getUTCFullYear();
+        const span = randInt(5, 15);
+        let total = 0;
+        for (let i = 0; i < span; i++) {
+          const yearSales = randInt(1000, 600000);
+          sales.push({
+            _id: new ObjectId(),
+            book_id: book._id,
+            year: pubYear + i,
+            sales: yearSales
+          });
+          total += yearSales;
+        }
+        book.sales = total;
+      }
+      return sales;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Run the seeding
+    // ---------------------------------------------------------------------------
+    print('Dropping existing database...');
+    db.dropDatabase();
+
+    print(`Generating ${TOTAL_AUTHORS} authors...`);
+    const authors = generateAuthors();
+    db.authors.insertMany(authors);
+    print(`  inserted ${authors.length} authors`);
+
+    print(`Generating ${TOTAL_BOOKS} books...`);
+    const books = generateBooks(authors);
+    db.books.insertMany(books);
+    print(`  inserted ${books.length} books`);
+
+    print('Generating yearly sales...');
+    const sales = generateSales(books);
+    db.sales_by_year.insertMany(sales);
+    print(`  inserted ${sales.length} sales_by_year rows`);
+
+    print('Updating books with total sales...');
+    for (const book of books) {
+      db.books.updateOne({ _id: book._id }, { $set: { sales: book.sales } });
+    }
+    print(`  updated ${books.length} books`);
+
+    print('Generating reviews...');
+    const reviews = generateReviews(books);
+    db.reviews.insertMany(reviews);
+    print(`  inserted ${reviews.length} reviews`);
+
+    // Indexes used by the views/queries later.
+    print('Creating indexes...');
+    db.authors.createIndex({ name: 1 });
+    db.books.createIndex({ author_id: 1 });
+    db.books.createIndex({ title: 1 });
+    db.books.createIndex({ published_date: 1 });
+    db.books.createIndex({ sales: -1 });
+    db.books.createIndex({ summary: 'text' });
+    db.reviews.createIndex({ book_id: 1 });
+    db.reviews.createIndex({ score: 1 });
+    db.sales_by_year.createIndex({ book_id: 1, year: 1 });
+    db.sales_by_year.createIndex({ year: 1, sales: -1 });
+    print('  done');
+
+    // ---------------------------------------------------------------------------
+    // Summary
+    // ---------------------------------------------------------------------------
+    print('\n=== SEED SUMMARY ===');
+    print(`authors        : ${db.authors.countDocuments()}`);
+    print(`books          : ${db.books.countDocuments()}`);
+    print(`reviews        : ${db.reviews.countDocuments()}`);
+    print(`sales_by_year  : ${db.sales_by_year.countDocuments()}`);
+
+    const reviewCounts = db.reviews.aggregate([
+      { $group: { _id: '$book_id', n: { $sum: 1 } } },
+      { $group: { _id: null, min: { $min: '$n' }, max: { $max: '$n' }, avg: { $avg: '$n' } } }
+    ]).toArray()[0];
+    print(`reviews/book   : min=${reviewCounts.min} max=${reviewCounts.max} avg=${reviewCounts.avg.toFixed(1)}`);
+
+    const salesYears = db.sales_by_year.aggregate([
+      { $group: { _id: '$book_id', n: { $sum: 1 } } },
+      { $group: { _id: null, min: { $min: '$n' }, max: { $max: '$n' } } }
+    ]).toArray()[0];
+    print(`years/book     : min=${salesYears.min} max=${salesYears.max}`);
+
+    const orphanBooks = db.books.countDocuments({ author_id: { $exists: false } });
+    const orphanReviews = db.reviews.countDocuments({ book_id: { $exists: false } });
+    const orphanSales = db.sales_by_year.countDocuments({ book_id: { $exists: false } });
+    print(`books w/o author   : ${orphanBooks}`);
+    print(`reviews w/o book   : ${orphanReviews}`);
+    print(`sales w/o book     : ${orphanSales}`);
+
+    const totalSales = db.books.aggregate([
+      { $group: { _id: null, total: { $sum: '$sales' } } }
+    ]).toArray()[0];
+    print(`total book sales (sum) : ${totalSales.total}`);
+
+    print('\nSeed complete.');
+kind: ConfigMap
+metadata:
+  name: mongo-seed
+  namespace: book-reviews

@@ -1,0 +1,17 @@
+.git
+.idea
+_build
+deps
+doc
+cover
+tmp
+assets/node_modules
+priv/static/assets
+priv/static/cache_manifest.json
+docker-compose.yml
+Dockerfile
+.dockerignore
+.env
+*.md
+mongo-seed
+erl_crash.dump
