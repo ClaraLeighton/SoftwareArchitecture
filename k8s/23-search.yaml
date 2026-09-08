@@ -1,0 +1,77 @@
+# ---------------------------------------------------------------------------
+# Search engine: OpenSearch (optional full-text search tier)
+# - Deployment: single node, discovery.type=single-node
+# - Security plugin disabled: this is a local cluster with no public exposure
+# - Service: ClusterIP, only reachable inside the cluster
+# The app falls back to the MongoDB query if this pod is down.
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: search
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-reviews
+      component: search
+  template:
+    metadata:
+      labels:
+        app: book-reviews
+        component: search
+    spec:
+      containers:
+        - name: opensearch
+          image: opensearchproject/opensearch:2
+          ports:
+            - containerPort: 9200
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+            - name: bootstrap.memory_lock
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 500m
+              memory: 768Mi
+            limits:
+              memory: 1536Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: search
+spec:
+  type: ClusterIP
+  selector:
+    app: book-reviews
+    component: search
+  ports:
+    - port: 9200
+      targetPort: 9200

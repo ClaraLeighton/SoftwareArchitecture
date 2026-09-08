@@ -4,8 +4,18 @@ defmodule BookReviews.Authors do
   """
 
   alias BookReviews.MongoRepo
+  alias BookReviews.Cache
 
   @collection "authors"
+
+  @doc """
+  Purges the cached authors overview table (per-author book count, average
+  score and total sales) after any author, book, review or sale change.
+  """
+  def invalidate_overview do
+    Cache.delete_pattern("authors_stats_*")
+    :ok
+  end
 
   def list_authors do
     MongoRepo.find(@collection, %{}, sort: %{"name" => 1})
@@ -29,8 +39,12 @@ defmodule BookReviews.Authors do
     }
 
     case MongoRepo.insert_one(@collection, doc) do
-      {:ok, result} -> {:ok, Map.put(doc, "_id", result.inserted_id)}
-      {:error, reason} -> {:error, reason}
+      {:ok, result} ->
+        invalidate_overview()
+        {:ok, Map.put(doc, "_id", result.inserted_id)}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -40,17 +54,45 @@ defmodule BookReviews.Authors do
     update = %{"$set" => build_update_fields(attrs)}
 
     case MongoRepo.update_one(@collection, filter, update) do
-      {:ok, _} -> {:ok, get_author!(id)}
-      {:error, reason} -> {:error, reason}
+      {:ok, _} ->
+        updated = get_author!(id)
+        invalidate_overview()
+        {:ok, updated}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   def delete_author(%{"_id" => id}) do
     oid = ensure_object_id(id)
-    MongoRepo.delete_one(@collection, %{"_id" => oid})
+
+    case MongoRepo.delete_one(@collection, %{"_id" => oid}) do
+      {:ok, _} ->
+        invalidate_overview()
+
+      error ->
+        error
+    end
   end
 
   def list_authors_with_stats(sort_field \\ "totalSales", sort_dir \\ -1, filters \\ %{}) do
+    key =
+      "authors_stats_" <>
+        (sort_field <> "|" <> Integer.to_string(sort_dir) <> "|" <> canonical_filters(filters))
+
+    Cache.get_or_compute(key, fn -> db_list_authors_with_stats(sort_field, sort_dir, filters) end)
+  end
+
+  defp canonical_filters(filters) do
+    filters
+    |> Map.to_list()
+    |> Enum.sort_by(&elem(&1, 0))
+    |> Enum.map_join("&", fn {key, value} -> "#{key}=#{value}" end)
+    |> Base.encode16(case: :lower)
+  end
+
+  defp db_list_authors_with_stats(sort_field, sort_dir, filters) do
     name_filter =
       if filters["name"] != "" and filters["name"] != nil, do: filters["name"], else: nil
 

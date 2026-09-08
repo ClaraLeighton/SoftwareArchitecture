@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# Cache: Redis (optional read-acceleration tier)
+# - Deployment: single replica, no persistence needed (cache only)
+# - Service: ClusterIP, only reachable inside the cluster
+# The app keeps working if this pod is down: reads fall back to MongoDB.
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-reviews
+      component: cache
+  template:
+    metadata:
+      labels:
+        app: book-reviews
+        component: cache
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          args: ["redis-server", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: cache
+spec:
+  type: ClusterIP
+  selector:
+    app: book-reviews
+    component: cache
+  ports:
+    - port: 6379
+      targetPort: 6379

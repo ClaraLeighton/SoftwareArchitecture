@@ -10,3 +10,9 @@ data:
   MONGODB_URL: "mongodb://mongodb.book-reviews.svc.cluster.local:27017/book_reviews"
   # Disable force_ssl in local clusters where TLS is not terminated at the app.
   FORCE_SSL: "false"
+  # Optional read-acceleration tier: cache (Redis) + search engine (OpenSearch).
+  # The application degrades gracefully when either endpoint is unavailable.
+  REDIS_URL: "redis://cache.book-reviews.svc.cluster.local:6379"
+  CACHE_ENABLED: "true"
+  OPENSEARCH_URL: "http://search.book-reviews.svc.cluster.local:9200"
+  SEARCH_ENABLED: "true"

@@ -233,6 +233,208 @@ Standard CRUD. Lists all sales entries with Book ID, Year, and Sales count. Crea
 
 ---
 
+## Assignment 3 — Cache (Redis) & Search (OpenSearch)
+
+Neither layer is required at runtime: the app reads `CACHE_ENABLED` /
+`SEARCH_ENABLED` at boot. With a layer disabled the app keeps working — cache
+reads become direct MongoDB reads, and the search window falls back to the
+Assignment 1 database query (summary `LIKE`). One image, four configurations.
+
+### The four Compose deployments
+
+```bash
+# 1) Application + Database
+docker compose -f docker-compose.yml up -d --build
+
+# 2) Application + Database + Cache
+docker compose -f docker-compose.cache.yml up -d --build
+
+# 3) Application + Database + Search Engine
+docker compose -f docker-compose.search.yml up -d --build
+
+# 4) Application + Database + Cache + Search Engine
+docker compose -f docker-compose.full.yml up -d --build
+```
+
+Run one stack at a time (they share host ports). Open
+[http://localhost:4000](http://localhost:4000).
+
+### Environment toggles (local dev, without Docker)
+
+```bash
+# default: no cache, no search engine
+mix phx.server
+
+# cache only               # search only
+CACHE_ENABLED=true \       SEARCH_ENABLED=true \
+REDIS_URL=redis://localhost:6379 \          OPENSEARCH_URL=http://localhost:9200 \
+mix phx.server \           mix phx.server
+
+# full stack
+CACHE_ENABLED=true REDIS_URL=redis://localhost:6379 \
+SEARCH_ENABLED=true OPENSEARCH_URL=http://localhost:9200 \
+mix phx.server
+```
+
+### What is cached / indexed, and how it is invalidated
+
+Cached keys (`book_reviews:*` in Redis, 300 s TTL):
+`book_avg_<id>` (book average score), `top_rated_10`, `top_selling_50`, and the
+authors overview table (`authors_stats_*`). Invalidations follow the dependency
+rules from the assignment:
+
+- new/edited/deleted **review** → purge that book’s average, `top_rated_10`,
+  `authors_stats_*` (and re-index the book);
+- new/edited/deleted **sale** → purge `top_selling_50`, `authors_stats_*`;
+- edited **book/author** → purge `authors_stats_*` (+ re-index the book).
+
+In OpenSearch each book is one document (title + summary + concatenated review
+texts); the index is rebuilt at app startup and kept in sync on every
+book/review create/update/delete.
+
+### Quickly check what's ON / OFF (any stack)
+
+Every running instance exposes a small status endpoint. Just open it in the
+browser:
+
+```
+http://localhost:4000/api/features
+```
+
+It returns JSON telling you exactly which layers are active in this instance:
+
+```json
+{"cache_backend":"Redis","cache_enabled":true,"search_backend":"OpenSearch","search_enabled":true}
+```
+
+- **Cache ON** → `cache_backend: "Redis"`, `cache_enabled: true`
+- **Cache OFF** → `cache_backend: "Null"`, `cache_enabled: false`
+- **Search ON** → `search_backend: "OpenSearch"`, `search_enabled: true`
+- **Search OFF** → `search_backend: "Null"`, `search_enabled: false`
+
+This is the single best first check when you're not sure which stack is running
+or whether a layer is really active — no need to peek into Redis or OpenSearch.
+
+### How to test each case (click-by-click)
+
+> **Tip — which container to inspect.** Each compose file names its Redis cache
+> differently, so use the matching container for your stack:
+> - `docker-compose.cache.yml` → cache container is **`book_reviews_cache_cache`**
+> - `docker-compose.full.yml` → cache container is **`book_reviews_cache_full`**
+>
+> And always `down` the previous stack before starting a different one (they
+> share host ports). If you ever get a "network not found" error, run:
+> `docker compose -f <file>.yml down` then start again.
+
+#### Case A — Full stack (cache + search both working)
+
+Start the full deployment:
+
+```bash
+docker compose -f docker-compose.full.yml up -d --build --remove-orphans
+```
+
+Then:
+
+1. **Confirm both layers are ON.** Open `http://localhost:4000/api/features`
+   → should show `"Redis"` and `"OpenSearch"`.
+2. **Cache is being written.** Browse a few pages
+   (`/books`, `/books/top-rated`, `/authors`), then run:
+   ```bash
+   docker exec book_reviews_cache_full redis-cli --scan --pattern 'book_reviews:*'
+   ```
+   ✅ You should see keys like `book_reviews:top_rated_10`,
+   `book_reviews:authors_stats_*`, `book_reviews:book_avg_*`.
+   (No keys = cache is off or the wrong container/stack is running.)
+3. **Cache stays fresh after a review.** In the UI create a review (`/reviews/new`).
+   Re-run the scan: `top_rated_10` and `authors_stats_*` should be **gone**
+   (only `top_selling_50` remains) — the app purged the now-stale tables.
+4. **Search finds review text (proves OpenSearch is really answering).** Go to
+   `/books/search` and search for **`transformative`**. This word exists only
+   inside review bodies (0 in titles/summaries), so a database-only search would
+   return nothing:
+   - ✅ Results ("Found 44 results") → OpenSearch is matching review text.
+5. **Search follows edits.** Edit one of those books and change its summary.
+   ~1 second later, search for the old summary word → 0 results; search for a
+   new word in the new summary → it appears.
+
+#### Case B — Turn the cache OFF (app + database only)
+
+```bash
+docker compose -f docker-compose.full.yml down
+docker compose -f docker-compose.yml up -d --build
+```
+
+1. **Confirm cache is OFF.** `http://localhost:4000/api/features` →
+   `"cache_backend":"Null"`, `"cache_enabled":false`.
+2. **Nothing is cached.** Browse pages, then run:
+   ```bash
+   docker exec book_reviews_mongodb_full mongosh book_reviews  # irrelevant, cache gone
+   docker exec book_reviews_cache_full redis-cli --scan --pattern 'book_reviews:*'
+   ```
+   The scan returns **nothing** — the app runs happily straight from MongoDB.
+   (Ignore the "no such container" if `cache_full` isn't running in this stack —
+   that's expected, there simply is no cache.)
+3. **Search is OFF too** (this stack has no search engine either):
+   `http://localhost:4000/api/features` → `"search_backend":"Null"`.
+   - Search still works via the **database fallback**: searching `dragon`
+     returns books (from summaries). But `transformative` → 0 results, because
+     the DB fallback can't see review text.
+
+#### Case C — Cache ON, Search OFF
+
+```bash
+docker compose -f docker-compose.yml down
+docker compose -f docker-compose.cache.yml up -d --build
+```
+
+1. `http://localhost:4000/api/features` → `"cache_backend":"Redis"`,
+   `"search_backend":"Null"`.
+2. Cache keys appear after browsing (use container **`book_reviews_cache_cache`**):
+   ```bash
+   docker exec book_reviews_cache_cache redis-cli --scan --pattern 'book_reviews:*'
+   ```
+3. Search `transformative` → **0 results** (no engine), but a summary word still
+   finds books (DB fallback). This stack has no OpenSearch running at all.
+
+#### Case D — Search ON, Cache OFF
+
+```bash
+docker compose -f docker-compose.cache.yml down
+docker compose -f docker-compose.search.yml up -d --build
+```
+
+1. `http://localhost:4000/api/features` → `"search_backend":"OpenSearch"`,
+   `"cache_backend":"Null"`.
+2. Search `transformative` → **results** (engine is answering).
+3. The Redis scan containers won't exist (no cache in this stack) — expected.
+
+#### Case E — Local dev toggles (no Docker)
+
+```bash
+# default: everything off
+mix phx.server
+# expected: /api/features → "Null" / "Null"
+
+# cache + search, hitting the docker containers
+CACHE_ENABLED=true REDIS_URL=redis://localhost:6379 \
+SEARCH_ENABLED=true OPENSEARCH_URL=http://localhost:9200 \
+mix phx.server
+# expected: "Redis" / "OpenSearch"
+```
+
+### Common gotchas when testing
+
+- **“Network not found” on `up`.** You switched stacks and left orphaned
+  containers/network. Fix: `docker compose -f <active>.yml down` first, or add
+  `--remove-orphans` to your `up`.
+- **Shared ports.** All stacks map the same host ports (`4000`, `27017`). Only
+  run one at a time, and use the correct cache container name (Case table above).
+- **`transformative` returns nothing.** That's expected when search is OFF — it's
+  the *signal* that search is off. Don't treat it as a bug.
+- **A just-edited book isn't searchable for ~1 second.** OpenSearch flushes its
+  index about once per second; wait 1 s before asserting the new value.
+
 ## Quick Smoke Test Checklist
 
 1. `http://localhost:4000` — Home loads with 7 navigation cards

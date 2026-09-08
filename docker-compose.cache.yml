@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# Deployment 2: Application + Database + Cache (Redis)
+#
+#   docker compose -f docker-compose.cache.yml up --build
+#
+# Without OPENSEARCH_URL the search layer stays disabled (Null backend) and
+# the search window falls back to the database query, so this stack exercises
+# the cache-only configuration.
+# ---------------------------------------------------------------------------
+services:
+  mongodb:
+    image: mongo:7
+    container_name: book_reviews_mongodb_cache
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-seed/seed.js:/docker-entrypoint-initdb.d/seed.js:ro
+      - ./mongo-seed:/seed:ro
+    environment:
+      MONGO_INITDB_DATABASE: book_reviews
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  cache:
+    image: redis:7-alpine
+    container_name: book_reviews_cache_cache
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    image: book_reviews/app:3.0.0
+    container_name: book_reviews_app_cache
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      PHX_SERVER: "true"
+      PHX_HOST: "localhost"
+      FORCE_SSL: "false"
+      MONGODB_URL: mongodb://mongodb:27017/book_reviews
+      REDIS_URL: redis://cache:6379
+      CACHE_ENABLED: "true"
+      SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ
+
+volumes:
+  mongodb_data:
