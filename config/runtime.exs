@@ -28,6 +28,37 @@ config :book_reviews, BookReviewsWeb.Endpoint,
 config :book_reviews, :mongo_url,
   System.get_env("MONGODB_URL", "mongodb://localhost:27017/book_reviews")
 
+# ---------------------------------------------------------------------------
+# Cache (Redis). Optional: the app runs without it when REDIS_URL is missing.
+# CACHE_ENABLED can be set explicitly, but by default the cache is enabled
+# whenever REDIS_URL is provided.
+# ---------------------------------------------------------------------------
+cache_enabled =
+  case System.get_env("CACHE_ENABLED") do
+    "true" -> true
+    "false" -> false
+    _ -> System.get_env("REDIS_URL", "") != ""
+  end
+
+config :book_reviews, :cache_enabled, cache_enabled
+config :book_reviews, :redis_url, System.get_env("REDIS_URL", "redis://localhost:6379")
+
+# ---------------------------------------------------------------------------
+# Search engine (OpenSearch). Optional: the app runs without it when
+# OPENSEARCH_URL is missing. SEARCH_ENABLED can be set explicitly.
+# ---------------------------------------------------------------------------
+search_enabled =
+  case System.get_env("SEARCH_ENABLED") do
+    "true" -> true
+    "false" -> false
+    _ -> System.get_env("OPENSEARCH_URL", "") != ""
+  end
+
+config :book_reviews, :search_enabled, search_enabled
+config :book_reviews, :opensearch_url, System.get_env("OPENSEARCH_URL", "http://localhost:9200")
+config :book_reviews, :search_username, System.get_env("OPENSEARCH_USERNAME", "")
+config :book_reviews, :search_password, System.get_env("OPENSEARCH_PASSWORD", "")
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :book_reviews, BookReviewsWeb.Endpoint,

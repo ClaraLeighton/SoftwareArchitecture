@@ -4,6 +4,7 @@ defmodule BookReviews.Books do
   """
 
   alias BookReviews.MongoRepo
+  alias BookReviews.{Cache, Search}
 
   @collection "books"
 
@@ -32,8 +33,14 @@ defmodule BookReviews.Books do
       }
 
       case MongoRepo.insert_one(@collection, doc) do
-        {:ok, result} -> {:ok, Map.put(doc, "_id", result.inserted_id)}
-        {:error, reason} -> {:error, reason}
+        {:ok, result} ->
+          book = Map.put(doc, "_id", result.inserted_id)
+          Search.index_book(book)
+          invalidate_host_views()
+          {:ok, book}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     else
       {:error, reason} -> {:error, reason}
@@ -47,8 +54,15 @@ defmodule BookReviews.Books do
     case build_update_fields(attrs) do
       {:ok, fields} ->
         case MongoRepo.update_one(@collection, filter, %{"$set" => fields}) do
-          {:ok, _} -> {:ok, get_book!(id)}
-          {:error, reason} -> {:error, reason}
+          {:ok, _} ->
+            book = get_book!(id)
+            Search.index_book(book)
+            Cache.delete(avg_score_key(id))
+            invalidate_host_views()
+            {:ok, book}
+
+          {:error, reason} ->
+            {:error, reason}
         end
 
       {:error, reason} ->
@@ -58,10 +72,68 @@ defmodule BookReviews.Books do
 
   def delete_book(%{"_id" => id}) do
     oid = ensure_object_id(id)
-    MongoRepo.delete_one(@collection, %{"_id" => oid})
+
+    case MongoRepo.delete_one(@collection, %{"_id" => oid}) do
+      {:ok, _} ->
+        Search.delete_book(id)
+        Cache.delete(avg_score_key(id))
+        invalidate_host_views()
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Average review score of a single book (1–5), cached and reused across the
+  derived views. Returns `nil` for books without reviews.
+  """
+  def average_book_score(book_id) do
+    Cache.get_or_compute(avg_score_key(book_id), fn -> compute_average_score(book_id) end)
+  end
+
+  defp compute_average_score(book_id) do
+    pipeline = [
+      %{"$match" => %{"book_id" => ensure_object_id(book_id)}},
+      %{"$group" => %{"_id" => nil, "avg" => %{"$avg" => "$score"}}}
+    ]
+
+    case MongoRepo.aggregate("reviews", pipeline) do
+      [%{"avg" => avg}] -> avg
+      [] -> nil
+    end
+  end
+
+  defp avg_score_key(book_id) do
+    "book_avg_" <> id_string(book_id)
+  end
+
+  defp id_string(%BSON.ObjectId{} = oid), do: BSON.ObjectId.encode!(oid)
+  defp id_string(id) when is_binary(id), do: id
+
+  @doc """
+  Purges every cached entry that could be affected by a change to a book:
+  the books it appears in (top rated / top selling) and the authors overview.
+  """
+  def invalidate_host_views do
+    Cache.delete(top_rated_key(10))
+    Cache.delete(top_selling_key(50))
+    Cache.delete_pattern("authors_stats_*")
+    :ok
   end
 
   def top_rated_books(limit \\ 10) do
+    Cache.get_or_compute(top_rated_key(limit), fn -> db_top_rated_books(limit) end)
+  end
+
+  def top_selling_books(limit \\ 50) do
+    Cache.get_or_compute(top_selling_key(limit), fn -> db_top_selling_books(limit) end)
+  end
+
+  defp top_rated_key(limit), do: "top_rated_#{limit}"
+  defp top_selling_key(limit), do: "top_selling_#{limit}"
+
+  defp db_top_rated_books(limit) do
     pipeline = [
       %{
         "$lookup" => %{
@@ -90,7 +162,7 @@ defmodule BookReviews.Books do
     MongoRepo.aggregate(@collection, pipeline)
   end
 
-  def top_selling_books(limit \\ 50) do
+  defp db_top_selling_books(limit) do
     pipeline = [
       %{"$sort" => %{"sales" => -1}},
       %{"$limit" => limit},
@@ -163,6 +235,11 @@ defmodule BookReviews.Books do
 
   def count_books do
     MongoRepo.count(@collection)
+  end
+
+  @doc "All reviews for a book (used to build the searchable text of a book)."
+  def list_reviews_for_index(book_id) do
+    MongoRepo.find("reviews", %{"book_id" => ensure_object_id(book_id)})
   end
 
   defp get_top5_by_year do
@@ -241,11 +318,13 @@ defmodule BookReviews.Books do
   end
 
   defp parse_object_id(nil), do: {:error, :invalid_author}
+  defp parse_object_id(""), do: {:error, :invalid_author}
 
   defp parse_object_id(id) do
     {:ok, BSON.ObjectId.decode!(id)}
   rescue
     ArgumentError -> {:error, :invalid_author}
+    FunctionClauseError -> {:error, :invalid_author}
   end
 
   defp parse_integer(value, min) do

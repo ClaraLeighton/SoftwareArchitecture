@@ -1,0 +1,98 @@
+# ---------------------------------------------------------------------------
+# Deployment 4: Application + Database + Cache (Redis) + Search Engine (OpenSearch)
+#
+#   docker compose -f docker-compose.full.yml up --build
+#
+# The cache and the search engine are optional layers: the app container only
+# reads REDIS_URL / OPENSEARCH_URL. Point them elsewhere or remove them and the
+# application runs untouched.
+# ---------------------------------------------------------------------------
+services:
+  mongodb:
+    image: mongo:7
+    container_name: book_reviews_mongodb_full
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-seed/seed.js:/docker-entrypoint-initdb.d/seed.js:ro
+      - ./mongo-seed:/seed:ro
+    environment:
+      MONGO_INITDB_DATABASE: book_reviews
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Cache: Redis. The app uses it purely as a read-acceleration tier and keeps
+  # working (hitting MongoDB directly) if it is unreachable.
+  # ---------------------------------------------------------------------------
+  cache:
+    image: redis:7-alpine
+    container_name: book_reviews_cache_full
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Search engine: OpenSearch (single node, security feature disabled so the
+  # local cluster works without TLS / credentials out of the box).
+  # ---------------------------------------------------------------------------
+  search:
+    image: opensearchproject/opensearch:2
+    container_name: book_reviews_search_full
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9200/_cluster/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 40s
+
+  app:
+    build: .
+    image: book_reviews/app:3.0.0
+    container_name: book_reviews_app_full
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+      search:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      PHX_SERVER: "true"
+      PHX_HOST: "localhost"
+      FORCE_SSL: "false"
+      MONGODB_URL: mongodb://mongodb:27017/book_reviews
+      REDIS_URL: redis://cache:6379
+      CACHE_ENABLED: "true"
+      OPENSEARCH_URL: http://search:9200
+      SEARCH_ENABLED: "true"
+      SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ
+
+volumes:
+  mongodb_data:

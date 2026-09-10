@@ -4,6 +4,7 @@ defmodule BookReviewsWeb.BookController do
   alias BookReviews.Books
   alias BookReviews.Authors
   alias BookReviews.Reviews
+  alias BookReviews.Search
 
   def index(conn, _params) do
     books = Books.list_books()
@@ -33,8 +34,9 @@ defmodule BookReviewsWeb.BookController do
     author_id = BSON.ObjectId.encode!(book["author_id"])
     author = Authors.get_author!(author_id)
     reviews = Reviews.list_reviews_by_book(id)
+    avg_score = Books.average_book_score(id)
 
-    render(conn, :show, book: book, author: author, reviews: reviews)
+    render(conn, :show, book: book, author: author, reviews: reviews, avg_score: avg_score)
   end
 
   def edit(conn, %{"id" => id}) do
@@ -79,7 +81,7 @@ defmodule BookReviewsWeb.BookController do
 
   def search(conn, %{"q" => query} = params) when query != "" do
     page = String.to_integer(Map.get(params, "page", "1"))
-    results = Books.search_books(query, page)
+    results = Search.search(query, page)
     render(conn, :search, results: results, query: query)
   end
 

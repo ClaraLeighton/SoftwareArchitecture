@@ -30,6 +30,12 @@ defmodule BookReviewsWeb.Router do
     resources "/sales", SaleController
   end
 
+  scope "/api", BookReviewsWeb do
+    pipe_through :api
+
+    get "/features", PageController, :features
+  end
+
   if Application.compile_env(:book_reviews, :dev_routes) do
     import Phoenix.LiveDashboard.Router
 

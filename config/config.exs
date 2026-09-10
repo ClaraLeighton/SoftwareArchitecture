@@ -2,7 +2,13 @@ import Config
 
 config :book_reviews,
   generators: [timestamp_type: :utc_datetime],
-  mongo_url: "mongodb://localhost:27017/book_reviews"
+  mongo_url: "mongodb://localhost:27017/book_reviews",
+  cache_enabled: false,
+  redis_url: "redis://localhost:6379",
+  search_enabled: false,
+  opensearch_url: "http://localhost:9200",
+  search_username: "",
+  search_password: ""
 
 config :book_reviews, BookReviewsWeb.Endpoint,
   url: [host: "localhost"],
