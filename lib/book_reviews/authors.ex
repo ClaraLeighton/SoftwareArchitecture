@@ -143,6 +143,7 @@ defmodule BookReviews.Authors do
             "_id" => "$_id",
             "name" => %{"$first" => "$name"},
             "country" => %{"$first" => "$country"},
+            "image" => %{"$first" => "$image"},
             "books" => %{
               "$sum" => %{"$cond" => [%{"$ifNull" => ["$bs._id", false]}, 1, 0]}
             },
