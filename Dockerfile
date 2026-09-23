@@ -43,7 +43,8 @@ FROM debian:bookworm-20260803-slim AS app
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends libssl3 libncurses6 ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    useradd --system --create-home appuser
+    useradd --system --create-home appuser && \
+    mkdir -p /data && chown appuser:appuser /data
 
 WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app/_build/prod/rel/book_reviews ./

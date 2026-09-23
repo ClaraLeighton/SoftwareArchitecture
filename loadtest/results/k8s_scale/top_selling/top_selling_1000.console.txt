@@ -1,0 +1,16 @@
+== Load test: https://app.localhost:30443/books/top-selling ==
+requests:      1000
+concurrency:   50
+elapsed (s):   1.695
+requests/s:    589.81
+completed:     1000
+ok (<400):     1000
+failed/timeout:0
+bytes total:   49376000
+latency mean:  78.831 ms
+latency median:76.525 ms
+latency p90:    107.691 ms
+latency p95:    118.988 ms
+latency p99:    149.782 ms
+latency max:   177.236 ms
+status codes:  200=1000

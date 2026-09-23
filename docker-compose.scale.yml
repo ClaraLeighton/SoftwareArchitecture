@@ -1,0 +1,150 @@
+# ---------------------------------------------------------------------------
+# Deployment 4: Application (x3) + Database + Reverse Proxy as load balancer
+# + Cache + Search Engine. The full horizontally scaled stack.
+#
+#   docker compose -f docker-compose.scale.yml up --build
+#
+# Three identical, stateless app instances share one MongoDB, one Redis and
+# one OpenSearch, plus a shared volume (/data) for uploads and published
+# static assets. Nginx acts as load balancer (least_conn) across them and
+# serves/caches the static files at the edge. Stopping any app instance does
+# not break the application.
+#
+# Access: https://app.localhost
+# ---------------------------------------------------------------------------
+name: book_reviews_scale
+
+# Extension field: the shared app-template merged into app1/app2/app3 via
+# the YAML merge key (<<). Kept at top level so compose treats it as an
+# extension and does NOT spawn an extra container for it.
+x-app: &app
+  build: .
+  image: book_reviews/app:4.0.0
+  restart: unless-stopped
+  depends_on:
+    mongodb:
+      condition: service_healthy
+    cache:
+      condition: service_healthy
+    search:
+      condition: service_healthy
+  volumes:
+    - shared_data:/data
+  environment:
+    PORT: "4000"
+    PHX_SERVER: "true"
+    PHX_HOST: "app.localhost"
+    FORCE_SSL: "false"
+    MONGODB_URL: mongodb://mongodb:27017/book_reviews
+    REDIS_URL: redis://cache:6379
+    CACHE_ENABLED: "true"
+    OPENSEARCH_URL: http://search:9200
+    SEARCH_ENABLED: "true"
+    SERVE_STATIC_ASSETS: "false"
+    UPLOADS_PATH: /data/uploads
+    STATIC_DIR: /data/static
+    SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ
+
+services:
+  # ---------------------------------------------------------------------------
+  # Database: MongoDB 7.
+  # ---------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7
+    container_name: book_reviews_mongodb_scale
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-seed/seed.js:/docker-entrypoint-initdb.d/seed.js:ro
+      - ./mongo-seed:/seed:ro
+    environment:
+      MONGO_INITDB_DATABASE: book_reviews
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Cache: Redis.
+  # ---------------------------------------------------------------------------
+  cache:
+    image: redis:7-alpine
+    container_name: book_reviews_cache_scale
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Search engine: OpenSearch.
+  # ---------------------------------------------------------------------------
+  search:
+    image: opensearchproject/opensearch:2
+    container_name: book_reviews_search_scale
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 40s
+
+  # ---------------------------------------------------------------------------
+  # Application instances (x3): identical, stateless, sharing all state via
+  # MongoDB / Redis / OpenSearch / the shared volume.
+  # The YAML anchor (top-level extension field x-app) keeps the three services
+  # in sync by construction.
+  # ---------------------------------------------------------------------------
+  app1:
+    <<: *app
+    container_name: book_reviews_app1_scale
+
+  app2:
+    <<: *app
+    container_name: book_reviews_app2_scale
+
+  app3:
+    <<: *app
+    container_name: book_reviews_app3_scale
+
+  # ---------------------------------------------------------------------------
+  # Reverse proxy / load balancer (Nginx): TLS termination, static assets,
+  # least-conn balancing across app1/app2/app3.
+  # ---------------------------------------------------------------------------
+  nginx:
+    build: ./nginx
+    image: book_reviews/nginx:4.0.0
+    container_name: book_reviews_nginx_scale
+    restart: unless-stopped
+    depends_on:
+      app1:
+        condition: service_started
+      app2:
+        condition: service_started
+      app3:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      NGINX_UPSTREAM: "server app1:4000; server app2:4000; server app3:4000;"
+    volumes:
+      - shared_data:/data
+
+volumes:
+  mongodb_data:
+  shared_data:

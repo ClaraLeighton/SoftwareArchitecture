@@ -1,0 +1,114 @@
+# ---------------------------------------------------------------------------
+# BookReviews edge: TLS termination + static assets + reverse proxy / load
+# balancer (docker compose deployments).
+#
+# The application publishes its compiled priv/static directory to /data/static
+# (STATIC_DIR) and its uploads to /data/uploads (UPLOADS_PATH) on the shared
+# volume. The edge serves those files directly from disk ("CDN at the edge")
+# and proxies every other request to the app upstream.
+#
+# The upstream block is injected by compose through the NGINX_UPSTREAM
+# environment variable:
+#   single instance : "server app:4000;"
+#   load balanced   : "server app1:4000; server app2:4000; server app3:4000;"
+# ---------------------------------------------------------------------------
+
+upstream bookreviews {
+    least_conn;
+    ${NGINX_UPSTREAM}
+}
+
+# Shared disk cache for edge responses (used as fallback for assets/uploads).
+proxy_cache_path /var/cache/nginx/edge levels=1:2 keys_zone=edge:10m max_size=64m inactive=24h use_temp_path=off;
+
+# ---- HTTP listener: health check + redirect to HTTPS -----------------------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name app.localhost localhost;
+
+    location = /healthz {
+        return 200 "ok\n";
+        access_log off;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ---- HTTPS listener: edge entry point --------------------------------------
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name app.localhost localhost;
+
+    ssl_certificate     /etc/nginx/certs/server.crt;
+    ssl_certificate_key /etc/nginx/certs/server.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_session_cache   shared:SSLedge:10m;
+    ssl_session_tickets off;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 500;
+
+    client_max_body_size 10m;
+
+    # Common proxy settings (biz traffic is intentionally NOT cached so the
+    # load test exercises the live database / cache / search tiers).
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host  $host;
+    proxy_read_timeout    60s;
+    proxy_connect_timeout 5s;
+
+    # Compiled static assets (published by every app instance to /data/static).
+    location /assets/ {
+        root /data/static;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        access_log off;
+    }
+
+    location /images/ {
+        root /data/static;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        access_log off;
+    }
+
+    location = /favicon.ico {
+        root /data/static;
+        add_header Cache-Control "public, max-age=31536000";
+        access_log off;
+    }
+
+    location = /robots.txt {
+        root /data/static;
+        expires 1d;
+        access_log off;
+    }
+
+    # User uploads (book covers / author photos) on the shared volume.
+    location /uploads/ {
+        root /data;
+        expires 1d;
+        try_files $uri =404;
+        access_log off;
+    }
+
+    location = /healthz {
+        return 200 "ok\n";
+        access_log off;
+    }
+
+    # Everything else goes to the application (stateless; any instance works).
+    location / {
+        proxy_pass http://bookreviews;
+        proxy_cache off;
+    }
+}

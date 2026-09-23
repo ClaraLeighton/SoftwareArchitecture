@@ -3,46 +3,55 @@
 <.link href={~p"/books"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Books</.link>
 
 <div class="bg-white shadow rounded-lg p-6">
-  <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Title</dt>
-      <dd class="mt-1 text-sm text-gray-900">{@book["title"]}</dd>
-    </div>
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Author</dt>
-      <dd class="mt-1 text-sm">
-        <.link
-          href={~p"/authors/#{BSON.ObjectId.encode!(@book["author_id"])}"}
-          class="text-indigo-600 hover:text-indigo-900"
-        >
-          {@author["name"]}
-        </.link>
-      </dd>
-    </div>
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Published Date</dt>
-      <dd class="mt-1 text-sm text-gray-900">{format_date(@book["published_date"])}</dd>
-    </div>
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Total Sales</dt>
-      <dd class="mt-1 text-sm text-gray-900">{format_number(@book["sales"])}</dd>
-    </div>
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Average Review Score</dt>
-      <dd class="mt-1 text-sm text-gray-900">
-        <%= if @avg_score do %>
-          <span class="text-yellow-500">{score_stars(round(@avg_score))}</span>
-          <span class="ml-2">{Float.round(@avg_score * 1.0, 2)}</span>
-        <% else %>
-          <span class="text-gray-400">No reviews yet</span>
-        <% end %>
-      </dd>
-    </div>
-    <div class="sm:col-span-2">
-      <dt class="text-sm font-medium text-gray-500">Summary</dt>
-      <dd class="mt-1 text-sm text-gray-900">{@book["summary"]}</dd>
-    </div>
-  </dl>
+  <div class="flex gap-6">
+    <%= if @book["cover_image"] do %>
+      <img
+        src={@book["cover_image"]}
+        alt={"Cover of #{@book["title"]}"}
+        class="h-64 w-44 object-cover rounded-lg shadow"
+      />
+    <% end %>
+    <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 flex-1">
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Title</dt>
+        <dd class="mt-1 text-sm text-gray-900">{@book["title"]}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Author</dt>
+        <dd class="mt-1 text-sm">
+          <.link
+            href={~p"/authors/#{BSON.ObjectId.encode!(@book["author_id"])}"}
+            class="text-indigo-600 hover:text-indigo-900"
+          >
+            {@author["name"]}
+          </.link>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Published Date</dt>
+        <dd class="mt-1 text-sm text-gray-900">{format_date(@book["published_date"])}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Total Sales</dt>
+        <dd class="mt-1 text-sm text-gray-900">{format_number(@book["sales"])}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Average Review Score</dt>
+        <dd class="mt-1 text-sm text-gray-900">
+          <%= if @avg_score do %>
+            <span class="text-yellow-500">{score_stars(round(@avg_score))}</span>
+            <span class="ml-2">{Float.round(@avg_score * 1.0, 2)}</span>
+          <% else %>
+            <span class="text-gray-400">No reviews yet</span>
+          <% end %>
+        </dd>
+      </div>
+      <div class="sm:col-span-2">
+        <dt class="text-sm font-medium text-gray-500">Summary</dt>
+        <dd class="mt-1 text-sm text-gray-900">{@book["summary"]}</dd>
+      </div>
+    </dl>
+  </div>
 </div>
 
 <div class="mt-4 flex gap-2">

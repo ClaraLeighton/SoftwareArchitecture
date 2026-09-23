@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# Nginx edge: TLS termination + static assets + reverse proxy (load balancer)
+# in front of the book-reviews ClusterIP Service.
+#
+#   - TLS: self-signed cert provided as a Secret (see generate-edge-tls.sh)
+#   - Static: reads /data/static (published by the app) and /data/uploads
+#   - Dynamic: proxies to the `book-reviews:80` Service, which Kubernetes
+#     load-balances across the 3 app replicas.
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: book-reviews-edge
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: edge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-reviews
+      component: edge
+  template:
+    metadata:
+      labels:
+        app: book-reviews
+        component: edge
+    spec:
+      containers:
+        - name: nginx
+          image: book-reviews/nginx:4.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tls
+              mountPath: /etc/nginx/tls
+              readOnly: true
+            - name: conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: uploads-data
+        - name: tls
+          secret:
+            secretName: nginx-edge-tls
+        - name: conf
+          configMap:
+            name: nginx-edge-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: book-reviews-edge
+  namespace: book-reviews
+  labels:
+    app: book-reviews
+    component: edge
+spec:
+  type: NodePort
+  selector:
+    app: book-reviews
+    component: edge
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+      nodePort: 30443
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30080

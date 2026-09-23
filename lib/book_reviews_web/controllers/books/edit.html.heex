@@ -2,7 +2,13 @@
 
 <.link href={~p"/books"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Books</.link>
 
-<.form for={%{}} action={~p"/books/#{id_to_string(@book["_id"])}"} method="post" class="space-y-4">
+<.form
+  for={%{}}
+  action={~p"/books/#{id_to_string(@book["_id"])}"}
+  method="post"
+  enctype="multipart/form-data"
+  class="space-y-4"
+>
   <input type="hidden" name="_method" value="put" />
   <div>
     <label class="block text-sm font-medium text-gray-700">Title</label>
@@ -57,6 +63,25 @@
         </option>
       <% end %>
     </select>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Cover Image</label>
+    <%= if @book["cover_image"] do %>
+      <div class="mt-2 flex items-center gap-3">
+        <img
+          src={@book["cover_image"]}
+          alt="Current cover"
+          class="h-16 w-12 object-cover rounded border"
+        />
+        <span class="text-xs text-gray-500">Current cover. Upload a new file to replace it.</span>
+      </div>
+    <% end %>
+    <input
+      type="file"
+      name="book[cover_image]"
+      accept="image/*"
+      class="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded file:border-0 file:bg-purple-50 file:py-2 file:px-4 file:text-purple-700"
+    />
   </div>
   <div>
     <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Update Book</button>

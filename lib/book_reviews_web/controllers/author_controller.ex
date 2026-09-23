@@ -2,6 +2,10 @@ defmodule BookReviewsWeb.AuthorController do
   use BookReviewsWeb, :controller
 
   alias BookReviews.Authors
+  alias BookReviews.Uploads
+
+  @upload_field "image"
+  @upload_kind :author_image
 
   def index(conn, params) do
     sort_field = Map.get(params, "sort", "totalSales")
@@ -36,13 +40,18 @@ defmodule BookReviewsWeb.AuthorController do
   end
 
   def create(conn, %{"author" => author_params}) do
-    case Authors.create_author(author_params) do
-      {:ok, _author} ->
-        conn
-        |> put_flash(:info, "Author created successfully.")
-        |> redirect(to: ~p"/authors")
+    with {:ok, params, _replaced} <- handle_upload(author_params) do
+      case Authors.create_author(params) do
+        {:ok, _author} ->
+          conn
+          |> put_flash(:info, "Author created successfully.")
+          |> redirect(to: ~p"/authors")
 
-      {:error, _changeset} ->
+        {:error, _changeset} ->
+          render(conn, :new, author: params)
+      end
+    else
+      {:error, _reason} ->
         render(conn, :new, author: author_params)
     end
   end
@@ -59,14 +68,22 @@ defmodule BookReviewsWeb.AuthorController do
 
   def update(conn, %{"id" => id, "author" => author_params}) do
     author = Authors.get_author!(id)
+    previous_image = author["image"]
 
-    case Authors.update_author(author, author_params) do
-      {:ok, _author} ->
-        conn
-        |> put_flash(:info, "Author updated successfully.")
-        |> redirect(to: ~p"/authors/#{id}")
+    with {:ok, params, replaced?} <- handle_upload(author_params) do
+      case Authors.update_author(author, params) do
+        {:ok, _author} ->
+          if replaced?, do: Uploads.delete(previous_image)
 
-      {:error, _changeset} ->
+          conn
+          |> put_flash(:info, "Author updated successfully.")
+          |> redirect(to: ~p"/authors/#{id}")
+
+        {:error, _changeset} ->
+          render(conn, :edit, author: Map.put(params, "_id", id))
+      end
+    else
+      {:error, _reason} ->
         render(conn, :edit, author: Map.put(author_params, "_id", id))
     end
   end
@@ -78,5 +95,20 @@ defmodule BookReviewsWeb.AuthorController do
     conn
     |> put_flash(:info, "Author deleted successfully.")
     |> redirect(to: ~p"/authors")
+  end
+
+  defp handle_upload(params) do
+    case params[@upload_field] do
+      %Plug.Upload{filename: filename, path: local_path} ->
+        content = File.read!(local_path)
+
+        case Uploads.store(@upload_kind, filename, content) do
+          {:ok, url} -> {:ok, Map.put(params, @upload_field, url), true}
+          {:error, _reason} -> {:error, :upload_failed}
+        end
+
+      _ ->
+        {:ok, Map.delete(params, @upload_field), false}
+    end
   end
 end

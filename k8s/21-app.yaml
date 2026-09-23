@@ -1,7 +1,9 @@
 # ---------------------------------------------------------------------------
 # Phoenix application
-# - Deployment: runs the release built by the repo Dockerfile
-# - Service: NodePort for local clusters; switch to LoadBalancer on EKS/GKE/AKS
+# - Deployment: runs the release built by the repo Dockerfile, scaled to 3
+#   replicas. The Service (below) is the load balancer Kubernetes provides:
+#   it distributes requests across all replicas.
+# - Service: ClusterIP (the Nginx edge at k8s/30-edge.yaml is the entry point)
 # Configuration comes from the app-config ConfigMap and app-secret Secret,
 # nothing is hard-coded in the image.
 # ---------------------------------------------------------------------------
@@ -14,7 +16,7 @@ metadata:
     app: book-reviews
     component: web
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: book-reviews
@@ -36,7 +38,7 @@ spec:
               memory: 16Mi
       containers:
         - name: app
-          image: book-reviews/app:3.0.0
+          image: book-reviews/app:4.0.0
           imagePullPolicy: IfNotPresent   # local cluster uses an imported image
           ports:
             - containerPort: 4000
@@ -45,6 +47,11 @@ spec:
                 name: app-config
             - secretRef:
                 name: app-secret
+          # Shared storage: uploads and published static assets live on the
+          # uploads PVC, mounted identically in every replica + the edge.
+          volumeMounts:
+            - name: uploads
+              mountPath: /data
           readinessProbe:
             httpGet:
               path: /
@@ -63,6 +70,10 @@ spec:
               memory: 192Mi
             limits:
               memory: 512Mi
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: uploads-data
 ---
 apiVersion: v1
 kind: Service
@@ -73,13 +84,10 @@ metadata:
     app: book-reviews
     component: web
 spec:
-  # NodePort works out of the box with k3d/minikube port mappings.
-  # For managed clouds use type: LoadBalancer instead (see README.md).
-  type: NodePort
+  type: ClusterIP
   selector:
     app: book-reviews
     component: web
   ports:
     - port: 80
       targetPort: 4000
-      nodePort: 30000

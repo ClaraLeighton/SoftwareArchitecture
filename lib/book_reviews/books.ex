@@ -4,7 +4,7 @@ defmodule BookReviews.Books do
   """
 
   alias BookReviews.MongoRepo
-  alias BookReviews.{Cache, Search}
+  alias BookReviews.{Cache, Search, Uploads}
 
   @collection "books"
 
@@ -29,7 +29,8 @@ defmodule BookReviews.Books do
         summary: attrs["summary"],
         published_date: parse_date(attrs["published_date"]),
         sales: sales,
-        author_id: author_id
+        author_id: author_id,
+        cover_image: empty_to_nil(attrs["cover_image"])
       }
 
       case MongoRepo.insert_one(@collection, doc) do
@@ -70,7 +71,7 @@ defmodule BookReviews.Books do
     end
   end
 
-  def delete_book(%{"_id" => id}) do
+  def delete_book(%{"_id" => id} = book) do
     oid = ensure_object_id(id)
 
     case MongoRepo.delete_one(@collection, %{"_id" => oid}) do
@@ -78,6 +79,7 @@ defmodule BookReviews.Books do
         Search.delete_book(id)
         Cache.delete(avg_score_key(id))
         invalidate_host_views()
+        Uploads.delete(Map.get(book, "cover_image"))
 
       error ->
         error
@@ -296,6 +298,7 @@ defmodule BookReviews.Books do
         |> Map.merge(author_fields)
         |> maybe_put("title", attrs["title"])
         |> maybe_put("summary", attrs["summary"])
+        |> maybe_put("cover_image", empty_to_nil(attrs["cover_image"]))
 
       {:ok, maybe_put(fields, "published_date", parse_date(attrs["published_date"]))}
     end
@@ -337,6 +340,10 @@ defmodule BookReviews.Books do
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp empty_to_nil(nil), do: nil
+  defp empty_to_nil(""), do: nil
+  defp empty_to_nil(value), do: value
 
   defp parse_date(nil), do: nil
   defp parse_date(""), do: nil

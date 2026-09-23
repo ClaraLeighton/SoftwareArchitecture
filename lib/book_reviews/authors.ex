@@ -5,6 +5,7 @@ defmodule BookReviews.Authors do
 
   alias BookReviews.MongoRepo
   alias BookReviews.Cache
+  alias BookReviews.Uploads
 
   @collection "authors"
 
@@ -35,7 +36,8 @@ defmodule BookReviews.Authors do
       name: attrs["name"],
       date_of_birth: parse_date(attrs["date_of_birth"]),
       country: attrs["country"],
-      bio: attrs["bio"]
+      bio: attrs["bio"],
+      image: empty_to_nil(attrs["image"])
     }
 
     case MongoRepo.insert_one(@collection, doc) do
@@ -64,12 +66,13 @@ defmodule BookReviews.Authors do
     end
   end
 
-  def delete_author(%{"_id" => id}) do
+  def delete_author(%{"_id" => id} = author) do
     oid = ensure_object_id(id)
 
     case MongoRepo.delete_one(@collection, %{"_id" => oid}) do
       {:ok, _} ->
         invalidate_overview()
+        Uploads.delete(Map.get(author, "image"))
 
       error ->
         error
@@ -79,7 +82,7 @@ defmodule BookReviews.Authors do
   def list_authors_with_stats(sort_field \\ "totalSales", sort_dir \\ -1, filters \\ %{}) do
     key =
       "authors_stats_" <>
-        (sort_field <> "|" <> Integer.to_string(sort_dir) <> "|" <> canonical_filters(filters))
+        sort_field <> "|" <> Integer.to_string(sort_dir) <> "|" <> canonical_filters(filters)
 
     Cache.get_or_compute(key, fn -> db_list_authors_with_stats(sort_field, sort_dir, filters) end)
   end
@@ -164,6 +167,7 @@ defmodule BookReviews.Authors do
             "country" => 1,
             "books" => 1,
             "totalSales" => 1,
+            "image" => 1,
             "avgScore" => %{"$round" => [%{"$avg" => "$rs.score"}, 2]}
           }
         },
@@ -217,11 +221,16 @@ defmodule BookReviews.Authors do
     |> maybe_put("date_of_birth", parse_date(attrs["date_of_birth"]))
     |> maybe_put("country", attrs["country"])
     |> maybe_put("bio", attrs["bio"])
+    |> maybe_put("image", empty_to_nil(attrs["image"]))
   end
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp empty_to_nil(nil), do: nil
+  defp empty_to_nil(""), do: nil
+  defp empty_to_nil(value), do: value
 
   defp parse_date(nil), do: nil
   defp parse_date(""), do: nil

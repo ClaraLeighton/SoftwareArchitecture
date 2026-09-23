@@ -16,8 +16,17 @@ defmodule BookReviews.Application do
     Application.put_env(
       :book_reviews,
       :search_backend,
-      if(search_enabled, do: BookReviews.SearchEngine.OpenSearch, else: BookReviews.SearchEngine.Null)
+      if(search_enabled,
+        do: BookReviews.SearchEngine.OpenSearch,
+        else: BookReviews.SearchEngine.Null
+      )
     )
+
+    # Prepare the edge/static layout before the web server accepts traffic:
+    # make sure the shared uploads root exists and, when a reverse proxy is
+    # configured, copy the compiled assets to the shared location it serves.
+    BookReviews.Uploads.ensure_root()
+    BookReviews.StaticPublisher.publish()
 
     children = [
       BookReviewsWeb.Telemetry,

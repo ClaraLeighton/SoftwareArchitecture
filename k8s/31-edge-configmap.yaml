@@ -1,0 +1,110 @@
+# Full Nginx configuration for the Kubernetes edge (replaces /etc/nginx/nginx.conf).
+# Upstream is the app ClusterIP Service, which balances across the 3 replicas.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-edge-config
+  namespace: book-reviews
+data:
+  nginx.conf: |
+    worker_processes auto;
+    pid /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      include /etc/nginx/mime.types;
+      default_type application/octet-stream;
+      sendfile on;
+      keepalive_timeout 65;
+
+      # The app Service: Kubernetes load-balances across the 3 replicas.
+      upstream bookreviews {
+        server book-reviews:80;
+      }
+
+      proxy_cache_path /var/cache/nginx/edge levels=1:2 keys_zone=edge:10m max_size=64m inactive=24h use_temp_path=off;
+
+      # ---- HTTP: health check + redirect to HTTPS -------------------------
+      server {
+        listen 80;
+
+        location = /healthz {
+          return 200 "ok\n";
+        }
+
+        location / {
+          return 301 https://$host$request_uri;
+        }
+      }
+
+      # ---- HTTPS: edge entry point ----------------------------------------
+      server {
+        listen 443 ssl;
+        http2 on;
+        server_name app.localhost;
+
+        ssl_certificate     /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_session_cache   shared:SSLedge:10m;
+
+        gzip on;
+        gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+        gzip_min_length 500;
+
+        client_max_body_size 10m;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        # Compiled static assets (published by the app to /data/static).
+        location /assets/ {
+          root /data/static;
+          add_header Cache-Control "public, max-age=31536000, immutable";
+          access_log off;
+        }
+
+        location /images/ {
+          root /data/static;
+          add_header Cache-Control "public, max-age=31536000, immutable";
+          access_log off;
+        }
+
+        location = /favicon.ico {
+          root /data/static;
+          add_header Cache-Control "public, max-age=31536000";
+          access_log off;
+        }
+
+        location = /robots.txt {
+          root /data/static;
+          expires 1d;
+          access_log off;
+        }
+
+        # User uploads (book covers / author photos) on the shared volume.
+        location /uploads/ {
+          root /data;
+          expires 1d;
+          try_files $uri =404;
+          access_log off;
+        }
+
+        location = /healthz {
+          return 200 "ok\n";
+        }
+
+        location / {
+          proxy_pass http://bookreviews;
+          proxy_cache off;
+        }
+      }
+    }

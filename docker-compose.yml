@@ -1,3 +1,13 @@
+# ---------------------------------------------------------------------------
+# Deployment 1: Application + Database (single instance, no reverse proxy).
+#
+#   docker compose -f docker-compose.yml up --build
+#
+# The application serves its own static assets and uploads. Uploaded images
+# default to the instance's priv/static/uploads; there is no edge in front.
+# ---------------------------------------------------------------------------
+name: book_reviews_app_db
+
 services:
   # ---------------------------------------------------------------------------
   # Database: MongoDB 7 in its own container.
@@ -29,6 +39,7 @@ services:
   # ---------------------------------------------------------------------------
   app:
     build: .
+    image: book_reviews/app:4.0.0
     container_name: book_reviews_app
     restart: unless-stopped
     depends_on:
@@ -42,6 +53,9 @@ services:
       PHX_HOST: "localhost"
       FORCE_SSL: "false"
       MONGODB_URL: mongodb://mongodb:27017/book_reviews
+      # No proxy in front: the application serves/caches nothing at the edge,
+      # so it keeps serving its own static assets and uploads.
+      SERVE_STATIC_ASSETS: "true"
       # Dev-only secret for this assignment; generate your own with
       # `mix phx.gen.secret` before exposing the app publicly.
       SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ

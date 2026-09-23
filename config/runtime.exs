@@ -25,8 +25,9 @@ config :book_reviews, BookReviewsWeb.Endpoint,
 
 # MongoDB connection string, overridable per environment (e.g. inside Docker
 # where the database is reached via the "mongodb" service name).
-config :book_reviews, :mongo_url,
-  System.get_env("MONGODB_URL", "mongodb://localhost:27017/book_reviews")
+config :book_reviews,
+       :mongo_url,
+       System.get_env("MONGODB_URL", "mongodb://localhost:27017/book_reviews")
 
 # ---------------------------------------------------------------------------
 # Cache (Redis). Optional: the app runs without it when REDIS_URL is missing.
@@ -58,6 +59,22 @@ config :book_reviews, :search_enabled, search_enabled
 config :book_reviews, :opensearch_url, System.get_env("OPENSEARCH_URL", "http://localhost:9200")
 config :book_reviews, :search_username, System.get_env("OPENSEARCH_USERNAME", "")
 config :book_reviews, :search_password, System.get_env("OPENSEARCH_PASSWORD", "")
+
+# ---------------------------------------------------------------------------
+# Edge / static assets (Assignment 4).
+# SERVE_STATIC_ASSETS=true (default): the application serves its own static
+# files and uploads (single instance, no proxy). SERVE_STATIC_ASSETS=false:
+# a reverse proxy in front serves and caches them; the app only renders HTML.
+# UPLOADS_PATH: shared storage for uploaded cover / author images.
+# STATIC_DIR: a shared location where the compiled priv/static folder is
+# published at boot so the reverse proxy can serve it from disk.
+# ---------------------------------------------------------------------------
+config :book_reviews,
+       :serve_static,
+       String.downcase(System.get_env("SERVE_STATIC_ASSETS", "true")) == "true"
+
+config :book_reviews, :uploads_path, System.get_env("UPLOADS_PATH") || nil
+config :book_reviews, :static_publish_dir, System.get_env("STATIC_DIR") || nil
 
 if config_env() == :dev do
   # Reload browser tabs when matching files change.

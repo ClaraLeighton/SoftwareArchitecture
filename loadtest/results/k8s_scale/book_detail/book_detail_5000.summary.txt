@@ -1,0 +1,16 @@
+== Load test: https://app.localhost:30443/books/6ab21a0ac305f41627a5bfb0 ==
+requests:      5000
+concurrency:   50
+elapsed (s):   9.602
+requests/s:    520.75
+completed:     4994
+ok (<400):     4994
+failed/timeout:6
+bytes total:   56277386
+latency mean:  81.529 ms
+latency median:68.253 ms
+latency p90:    112.242 ms
+latency p95:    132.970 ms
+latency p99:    248.324 ms
+latency max:   1264.849 ms
+status codes:  200=4994

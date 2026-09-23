@@ -1,0 +1,16 @@
+== Load test: https://app.localhost/assets/css/app.css ==
+requests:      1
+concurrency:   1
+elapsed (s):   0.015
+requests/s:    68.46
+completed:     1
+ok (<400):     1
+failed/timeout:0
+bytes total:   66069
+latency mean:  11.340 ms
+latency median:11.340 ms
+latency p90:    11.340 ms
+latency p95:    11.340 ms
+latency p99:    11.340 ms
+latency max:   11.340 ms
+status codes:  200=1

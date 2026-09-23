@@ -1,0 +1,16 @@
+== Load test: https://app.localhost:30443/books/search?q=novel ==
+requests:      1
+concurrency:   1
+elapsed (s):   0.067
+requests/s:    14.84
+completed:     1
+ok (<400):     1
+failed/timeout:0
+bytes total:   22480
+latency mean:  65.650 ms
+latency median:65.650 ms
+latency p90:    65.650 ms
+latency p95:    65.650 ms
+latency p99:    65.650 ms
+latency max:   65.650 ms
+status codes:  200=1
