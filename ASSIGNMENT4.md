@@ -236,7 +236,7 @@ docker compose --profile full up -d --build
 | `curl -sk -o /dev/null -w '%{http_code}\n' 'https://app.localhost/books/top-selling'` | `200` | aggregation works |
 | `curl -sk -o /dev/null -w '%{http_code}\n' 'https://app.localhost/books/search?q=novel'` | `200` | search window works |
 | first `top-selling` hit is slow, the next are fast | hot→cache | Redis caching the aggregation (A3 behavior) |
-
+![img_15.png](img/img_15.png)
 Tear down: `docker compose --profile full down`
 
 ---
@@ -318,7 +318,7 @@ k3d cluster create sa-a4 --agents 1 --servers 1 \
   --registry-use k3d-a4-registry:5111 \
   -p "30080:30080@server:0" -p "30443:30443@server:0" --wait
 ```
-
+![img_17.png](img/img_17.png)
 ### 6.2 Push the images to the registry
 
 ```bash
@@ -328,6 +328,7 @@ for img in book_reviews/app:4.0.0 book_reviews/nginx:4.0.0 mongo:7 \
   docker push "localhost:5111/$img"
 done
 ```
+![img_16.png](img/img_16.png)
 
 (The k3d-managed registry is already wired into every node as a mirror for the
 `k3d-a4-registry:5000` hostname.)
@@ -349,7 +350,7 @@ kubectl -n book-reviews set image deployment/book-reviews-edge \
 
 kubectl -n book-reviews rollout status deploy/book-reviews-app deploy/book-reviews-edge
 ```
-
+![img_18.png](img/img_18.png)
 ### 6.4 Checks — what to look for
 
 | Run | Expected | Meaning |
@@ -360,7 +361,7 @@ kubectl -n book-reviews rollout status deploy/book-reviews-app deploy/book-revie
 | `curl -sk --resolve app.localhost:30443:127.0.0.1 -o /dev/null -w '%{http_code}\n' https://app.localhost:30443/` | `200` | TLS through the edge on 30443 |
 | `curl -sk --resolve app.localhost:30443:127.0.0.1 https://app.localhost:30443/api/features` | `serve_static:false`, shared paths | stateless config same as compose |
 | `curl -skI --resolve app.localhost:30443:127.0.0.1 https://app.localhost:30443/assets/css/app.css` | `200` + `immutable` cache header | static at the edge, cached |
-
+![img_19.png](img/img_19.png)
 Service balancing + shared storage + failover:
 
 ```bash
@@ -414,7 +415,8 @@ docker compose --profile full up -d --build
 HOST_ROUTE=app.localhost:443:127.0.0.1 bash loadtest/run.sh https://app.localhost compose_full
 # results -> loadtest/results/compose_full/<endpoint>/<endpoint>_<n>.summary.txt
 ```
-
+![img_20.png](img/img_20.png)
+![img_21.png](img/img_21.png)
 **B. Load-balanced x3**
 
 ```bash
@@ -422,13 +424,13 @@ docker compose --profile full down
 docker compose --profile scale up -d --build
 HOST_ROUTE=app.localhost:443:127.0.0.1 bash loadtest/run.sh https://app.localhost compose_scale
 ```
-
+![img_22.png](img/img_22.png)
 **C. (Optional) Kubernetes edge** — same matrix through the cluster NodePort:
 
 ```bash
 HOST_ROUTE=app.localhost:30443:127.0.0.1 bash loadtest/run.sh https://app.localhost:30443 k8s_scale
 ```
-
+![img_23.png](img/img_23.png)
 `HOST_ROUTE=app.localhost:PORT:127.0.0.1` avoids an `/etc/hosts` edit: the
 loader keeps the `app.localhost` Host header, rewrites to `127.0.0.1:PORT`, and
 disables cert validation (self-signed).

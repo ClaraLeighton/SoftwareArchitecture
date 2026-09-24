@@ -1,16 +1,16 @@
 == Load test: https://app.localhost:30443/assets/css/app.css ==
 requests:      10
 concurrency:   10
-elapsed (s):   0.039
-requests/s:    258.32
+elapsed (s):   0.036
+requests/s:    278.16
 completed:     10
 ok (<400):     10
 failed/timeout:0
 bytes total:   660690
-latency mean:  18.391 ms
-latency median:18.037 ms
-latency p90:    20.708 ms
-latency p95:    20.708 ms
-latency p99:    20.708 ms
-latency max:   20.708 ms
+latency mean:  12.602 ms
+latency median:12.329 ms
+latency p90:    16.434 ms
+latency p95:    16.434 ms
+latency p99:    16.434 ms
+latency max:   16.434 ms
 status codes:  200=10

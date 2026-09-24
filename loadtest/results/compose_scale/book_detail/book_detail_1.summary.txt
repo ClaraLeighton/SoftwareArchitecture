@@ -1,16 +1,16 @@
-== Load test: https://app.localhost/books/6ab216d398c066585f83cc82 ==
+== Load test: https://app.localhost/books/6ab32a4aab25bf10adeb0ca6 ==
 requests:      1
 concurrency:   1
-elapsed (s):   0.017
-requests/s:    57.19
+elapsed (s):   0.134
+requests/s:    7.48
 completed:     1
 ok (<400):     1
 failed/timeout:0
-bytes total:   11269
-latency mean:  15.654 ms
-latency median:15.654 ms
-latency p90:    15.654 ms
-latency p95:    15.654 ms
-latency p99:    15.654 ms
-latency max:   15.654 ms
+bytes total:   11402
+latency mean:  131.986 ms
+latency median:131.986 ms
+latency p90:    131.986 ms
+latency p95:    131.986 ms
+latency p99:    131.986 ms
+latency max:   131.986 ms
 status codes:  200=1
