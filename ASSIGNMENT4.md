@@ -199,10 +199,14 @@ Open `https://app.localhost` in a browser:
 3. DevTools → **Network** → reload → the CSS/JS requests show a long
    `max-age=31536000` cache header and are served by nginx (200 from
    `memory`/`disk cache` on the second load).
+![img_11.png](img/img_11.png)
 4. Upload a new author photo and book cover via the UI (same flow as 2.3);
    this time the URL in DevTools shows the file under `/uploads/...` and the
    storage path on disk is `/data/uploads/...` (shared volume):
    `docker exec book_reviews_app_edge ls /data/uploads/{covers,authors}`
+![img_12.png](img/img_12.png)
+![img_13.png](img/img_13.png)
+![img_14.png](img/img_14.png)
 
 Tear down: `docker compose --profile proxy down`
 
