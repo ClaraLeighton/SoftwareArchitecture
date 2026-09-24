@@ -490,6 +490,10 @@ python3 loadtest/plot_results.py --dirs compose_full compose_scale k8s_scale
 #    latencies_dist.png   per-request latency CDF at the largest size
 #    metrics.png          CPU % / memory / threads per container over time
 ```
+![latencies_dist.png](loadtest/results/plots/latencies_dist.png)
+![latency.png](loadtest/results/plots/latency.png)
+![metrics.png](loadtest/results/plots/metrics.png)
+![throughput.png](loadtest/results/plots/throughput.png)
 
 ### 7.5 Standalone metrics watcher (one `.txt` per configuration)
 
@@ -503,7 +507,7 @@ loadtest/watch_metrics.sh scale 60     # sample for 60 s -> results/scale/metric
 loadtest/watch_metrics.sh all 30       # 30 s per profile, one .txt each
 # -> results/base/metrics/docker_stats.txt, results/proxy/metrics/docker_stats.txt, ...
 ```
-
+![img_24.png](img/img_24.png)
 `watch_metrics.sh <config> 0` (or no duration) runs until Ctrl-C.
 
 ---
@@ -520,9 +524,6 @@ mise x -- mix test
 ---
 
 ## 9. Report checklist (deliverable 4)
-
-The report lives in `REPORT4.md` (≤ 15 pages). Each required section maps to
-material collected by this guide:
 
 | Report requirement | Where the material is |
 |--------------------|-----------------------|
