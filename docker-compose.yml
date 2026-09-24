@@ -1,8 +1,95 @@
+# ---------------------------------------------------------------------------
+# BookReviews — one Compose file, four deployment combinations.
+#
+# Select ONE combination with a Compose profile so only that stack's services
+# (and its memory footprint) are started:
+#
+#   docker compose --profile base  up -d --build   # Deployment 1: app + MongoDB
+#   docker compose --profile proxy up -d --build   # Deployment 2: + Nginx edge (TLS/static)
+#   docker compose --profile full  up -d --build   # Deployment 3: + Redis + OpenSearch
+#   docker compose --profile scale up -d --build   # Deployment 4: 3 app replicas + LB + cache + search
+#
+# `mongodb` is the only "always on" service (no profile) and is shared by every
+# combination via the same named volume, so data persists across profile
+# switches. Because exactly one combination is up at a time, the shared host
+# ports (80/443, 27017, 6379, 9200) never collide.
+# ---------------------------------------------------------------------------
+name: book_reviews
+
+# ---------------------------------------------------------------------------
+# Extension fields (merged via the YAML merge key <<) — kept at the top so
+# Compose treats them as extensions and does NOT spawn extra containers.
+# ---------------------------------------------------------------------------
+x-edge-app: &edge-app
+  build: .
+  image: book_reviews/app:4.0.0
+  restart: unless-stopped
+  volumes:
+    - shared_data:/data
+  environment:
+    PORT: "4000"
+    PHX_SERVER: "true"
+    PHX_HOST: "app.localhost"
+    FORCE_SSL: "false"
+    MONGODB_URL: mongodb://mongodb:27017/book_reviews
+    # Behind the Nginx edge: it serves/caches static assets and uploads.
+    SERVE_STATIC_ASSETS: "false"
+    UPLOADS_PATH: /data/uploads
+    STATIC_DIR: /data/static
+    # Optional tiers; the proxy-only variant keeps them off.
+    CACHE_ENABLED: "false"
+    SEARCH_ENABLED: "false"
+    SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ
+
+x-full-app: &full-app
+  <<: *edge-app
+  depends_on:
+    mongodb:
+      condition: service_healthy
+    cache:
+      condition: service_healthy
+    search:
+      condition: service_healthy
+  environment:
+    PORT: "4000"
+    PHX_SERVER: "true"
+    PHX_HOST: "app.localhost"
+    FORCE_SSL: "false"
+    MONGODB_URL: mongodb://mongodb:27017/book_reviews
+    REDIS_URL: redis://cache:6379
+    CACHE_ENABLED: "true"
+    OPENSEARCH_URL: http://search:9200
+    SEARCH_ENABLED: "true"
+    SERVE_STATIC_ASSETS: "false"
+    UPLOADS_PATH: /data/uploads
+    STATIC_DIR: /data/static
+    SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ
+
+x-scale-app: &scale-app
+  <<: *full-app
+  depends_on:
+    mongodb:
+      condition: service_healthy
+    cache:
+      condition: service_healthy
+    search:
+      condition: service_healthy
+
+x-nginx: &nginx
+  build: ./nginx
+  image: book_reviews/nginx:4.0.0
+  restart: unless-stopped
+  ports:
+    - "80:80"
+    - "443:443"
+  volumes:
+    - shared_data:/data
+
 services:
   # ---------------------------------------------------------------------------
-  # Database: MongoDB 7 in its own container.
-  # Data persists in the named volume; seed.js runs automatically on first
-  # start (empty volume) via /docker-entrypoint-initdb.d.
+  # Database: MongoDB 7 — shared by every combination (always on). Data lives
+  # in the same named volume regardless of which profile is active.
+  # seed.js runs automatically only on first start (empty volume).
   # ---------------------------------------------------------------------------
   mongodb:
     image: mongo:7
@@ -24,13 +111,15 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  # Application: Phoenix web app built from the local Dockerfile.
-  # Waits for MongoDB to be healthy before starting.
+  # Deployment 1 (profile `base`): Application + Database, no proxy. The app
+  # serves its own static assets and uploads (priv/static/uploads).
   # ---------------------------------------------------------------------------
   app:
     build: .
+    image: book_reviews/app:4.0.0
     container_name: book_reviews_app
     restart: unless-stopped
+    profiles: ["base"]
     depends_on:
       mongodb:
         condition: service_healthy
@@ -42,9 +131,129 @@ services:
       PHX_HOST: "localhost"
       FORCE_SSL: "false"
       MONGODB_URL: mongodb://mongodb:27017/book_reviews
-      # Dev-only secret for this assignment; generate your own with
-      # `mix phx.gen.secret` before exposing the app publicly.
+      SERVE_STATIC_ASSETS: "true"
       SECRET_KEY_BASE: bDHAZXCeUwX7zYXRfUnXXlJ3fgAbv3YzGvR/vFpNP2dlZ7WCq6o+sWgiobcqLEsJ
+
+  # ---------------------------------------------------------------------------
+  # Deployment 2 (profile `proxy`): single app behind the edge, no cache/search.
+  # ---------------------------------------------------------------------------
+  app-edge:
+    <<: *edge-app
+    container_name: book_reviews_app_edge
+    profiles: ["proxy"]
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Deployment 3 (profile `full`): single app behind the edge with cache
+  # (Redis) + search (OpenSearch). Waits for all three data services to be
+  # healthy so the search index bootstraps on a warm engine.
+  # ---------------------------------------------------------------------------
+  app-full:
+    <<: *full-app
+    container_name: book_reviews_app_full
+    profiles: ["full"]
+
+  # ---------------------------------------------------------------------------
+  # Deployment 4 (profile `scale`): three identical, stateless instances
+  # sharing MongoDB / Redis / OpenSearch and the shared volume. Nginx balances
+  # across them (least_conn); stopping any instance does not break the app.
+  # ---------------------------------------------------------------------------
+  app1:
+    <<: *scale-app
+    container_name: book_reviews_app1_scale
+    profiles: ["scale"]
+
+  app2:
+    <<: *scale-app
+    container_name: book_reviews_app2_scale
+    profiles: ["scale"]
+
+  app3:
+    <<: *scale-app
+    container_name: book_reviews_app3_scale
+    profiles: ["scale"]
+
+  # ---------------------------------------------------------------------------
+  # Cache: Redis (profiles `full`, `scale`).
+  # ---------------------------------------------------------------------------
+  cache:
+    image: redis:7-alpine
+    container_name: book_reviews_cache
+    restart: unless-stopped
+    profiles: ["full", "scale"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Search engine: OpenSearch (profiles `full`, `scale`).
+  # ---------------------------------------------------------------------------
+  search:
+    image: opensearchproject/opensearch:2
+    container_name: book_reviews_search
+    restart: unless-stopped
+    profiles: ["full", "scale"]
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 40s
+
+  # ---------------------------------------------------------------------------
+  # Nginx edges — one per tier (separate services because the upstream
+  # differs; profiles keep only one of them active at a time):
+  # ---------------------------------------------------------------------------
+
+  # Deployment 2: upstream = the single app-edge instance.
+  nginx:
+    <<: *nginx
+    container_name: book_reviews_nginx
+    profiles: ["proxy"]
+    depends_on:
+      app-edge:
+        condition: service_started
+    environment:
+      NGINX_UPSTREAM: "server app-edge:4000;"
+
+  # Deployment 3: upstream = the single full app instance.
+  nginx-full:
+    <<: *nginx
+    container_name: book_reviews_nginx_full
+    profiles: ["full"]
+    depends_on:
+      app-full:
+        condition: service_started
+    environment:
+      NGINX_UPSTREAM: "server app-full:4000;"
+
+  # Deployment 4: upstream = the three scaled instances (least_conn).
+  nginx-scaled:
+    <<: *nginx
+    container_name: book_reviews_nginx_scale
+    profiles: ["scale"]
+    depends_on:
+      app1:
+        condition: service_started
+      app2:
+        condition: service_started
+      app3:
+        condition: service_started
+    environment:
+      NGINX_UPSTREAM: "server app1:4000; server app2:4000; server app3:4000;"
 
 volumes:
   mongodb_data:
+  shared_data:

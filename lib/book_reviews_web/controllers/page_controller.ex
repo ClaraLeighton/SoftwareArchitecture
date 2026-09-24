@@ -16,7 +16,10 @@ defmodule BookReviewsWeb.PageController do
       cache_enabled: Cache.enabled?(),
       cache_backend: Module.split(Cache.backend()) |> List.last(),
       search_enabled: Search.enabled?(),
-      search_backend: Module.split(Search.backend()) |> List.last()
+      search_backend: Module.split(Search.backend()) |> List.last(),
+      serve_static: Application.get_env(:book_reviews, :serve_static, true),
+      uploads_path: BookReviews.Uploads.root(),
+      static_publish_dir: Application.get_env(:book_reviews, :static_publish_dir)
     })
   end
 end

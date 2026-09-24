@@ -3,24 +3,33 @@
 <.link href={~p"/authors"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Authors</.link>
 
 <div class="bg-white shadow rounded-lg p-6">
-  <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Name</dt>
-      <dd class="mt-1 text-sm text-gray-900">{@author["name"]}</dd>
-    </div>
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Country</dt>
-      <dd class="mt-1 text-sm text-gray-900">{@author["country"]}</dd>
-    </div>
-    <div>
-      <dt class="text-sm font-medium text-gray-500">Date of Birth</dt>
-      <dd class="mt-1 text-sm text-gray-900">{format_date(@author["date_of_birth"])}</dd>
-    </div>
-    <div class="sm:col-span-2">
-      <dt class="text-sm font-medium text-gray-500">Bio</dt>
-      <dd class="mt-1 text-sm text-gray-900">{@author["bio"]}</dd>
-    </div>
-  </dl>
+  <div class="flex gap-6">
+    <%= if @author["image"] do %>
+      <img
+        src={@author["image"]}
+        alt={"Photo of #{@author["name"]}"}
+        class="h-40 w-40 object-cover rounded-full shadow"
+      />
+    <% end %>
+    <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 flex-1">
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Name</dt>
+        <dd class="mt-1 text-sm text-gray-900">{@author["name"]}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Country</dt>
+        <dd class="mt-1 text-sm text-gray-900">{@author["country"]}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Date of Birth</dt>
+        <dd class="mt-1 text-sm text-gray-900">{format_date(@author["date_of_birth"])}</dd>
+      </div>
+      <div class="sm:col-span-2">
+        <dt class="text-sm font-medium text-gray-500">Bio</dt>
+        <dd class="mt-1 text-sm text-gray-900">{@author["bio"]}</dd>
+      </div>
+    </dl>
+  </div>
 </div>
 
 <div class="mt-4 flex gap-2">

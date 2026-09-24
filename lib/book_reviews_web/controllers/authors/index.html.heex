@@ -74,6 +74,9 @@
     <thead class="bg-gray-50">
       <tr>
         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Photo
+        </th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           <a
             href={"/authors?sort=name&dir=#{if @sort_field == "name" && @sort_dir == "desc", do: "asc", else: "desc"}&name=#{@filters["name"]}&country=#{@filters["country"]}&books=#{@filters["books"]}&avgScore=#{@filters["avgScore"]}&totalSales=#{@filters["totalSales"]}"}
             class="hover:underline"
@@ -131,6 +134,13 @@
     <tbody class="bg-white divide-y divide-gray-200">
       <%= for author <- @authors do %>
         <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <%= if author["image"] do %>
+              <img src={author["image"]} alt="" class="h-12 w-12 object-cover rounded-full" />
+            <% else %>
+              <span class="text-xs text-gray-400">—</span>
+            <% end %>
+          </td>
           <td class="px-6 py-4 whitespace-nowrap">
             <.link
               href={~p"/authors/#{id_to_string(author["_id"])}"}

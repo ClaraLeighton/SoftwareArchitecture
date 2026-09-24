@@ -1,0 +1,16 @@
+== Load test: https://app.localhost/books/6ab32a4aab25bf10adeb0ca6 ==
+requests:      10
+concurrency:   10
+elapsed (s):   0.050
+requests/s:    199.99
+completed:     10
+ok (<400):     10
+failed/timeout:0
+bytes total:   114020
+latency mean:  21.715 ms
+latency median:22.273 ms
+latency p90:    30.125 ms
+latency p95:    30.125 ms
+latency p99:    30.125 ms
+latency max:   30.125 ms
+status codes:  200=10

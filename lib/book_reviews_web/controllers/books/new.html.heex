@@ -2,7 +2,13 @@
 
 <.link href={~p"/books"} class="text-indigo-600 hover:text-indigo-900 mb-4 inline-block">← Back to Books</.link>
 
-<.form for={%{}} action={~p"/books"} method="post" class="space-y-4">
+<.form
+  for={%{}}
+  action={~p"/books"}
+  method="post"
+  enctype="multipart/form-data"
+  class="space-y-4"
+>
   <div>
     <label class="block text-sm font-medium text-gray-700">Title</label>
     <input
@@ -49,6 +55,18 @@
         <option value={id_to_string(author["_id"])}>{author["name"]}</option>
       <% end %>
     </select>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Cover Image</label>
+    <input
+      type="file"
+      name="book[cover_image]"
+      accept="image/*"
+      class="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded file:border-0 file:bg-purple-50 file:py-2 file:px-4 file:text-purple-700"
+    />
+    <p class="mt-1 text-xs text-gray-500">
+      Optional. Stored in shared storage and served by the edge.
+    </p>
   </div>
   <div>
     <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Create Book</button>

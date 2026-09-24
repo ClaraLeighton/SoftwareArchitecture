@@ -8,7 +8,17 @@ config :book_reviews,
   search_enabled: false,
   opensearch_url: "http://localhost:9200",
   search_username: "",
-  search_password: ""
+  search_password: "",
+  # Whether the application itself serves static assets and user uploads. Set
+  # to false when a reverse proxy is present: the proxy then serves (and caches)
+  # them at the edge instead. Selected at runtime by SERVE_STATIC_ASSETS.
+  serve_static: true,
+  # Root directory for uploaded book covers / author images. Configurable via
+  # UPLOADS_PATH. nil = the release's priv/static/uploads (single instance).
+  uploads_path: nil,
+  # Where the compiled priv/static directory is copied at boot so the reverse
+  # proxy can serve it from a shared volume (CDN-style). nil = not published.
+  static_publish_dir: nil
 
 config :book_reviews, BookReviewsWeb.Endpoint,
   url: [host: "localhost"],

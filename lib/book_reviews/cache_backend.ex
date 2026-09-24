@@ -11,7 +11,12 @@ defmodule BookReviews.CacheBackend do
   @callback get(prefix :: String.t(), key :: String.t()) :: {:ok, term()} | :error
 
   @doc "Writes `value` under `key`, expiring after `ttl_seconds`."
-  @callback put(prefix :: String.t(), key :: String.t(), value :: term(), ttl_seconds :: integer()) ::
+  @callback put(
+              prefix :: String.t(),
+              key :: String.t(),
+              value :: term(),
+              ttl_seconds :: integer()
+            ) ::
               :ok | {:error, term()}
 
   @doc "Deletes a single key."

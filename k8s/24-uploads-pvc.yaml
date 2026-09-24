@@ -1,0 +1,19 @@
+# ---------------------------------------------------------------------------
+# Shared uploads / static storage for the BookReviews deployment.
+#
+# In a local k3d/minikube cluster (single-node) a ReadWriteOnce volume can be
+# mounted by every app replica and the edge pod because they all land on the
+# same node. For a real multi-node cluster use a ReadWriteMany volume or an
+# object store instead (see KUBERNETES.md).
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-data
+  namespace: book-reviews
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
