@@ -42,12 +42,10 @@ mkdir -p "${OUT_ROOT}/metrics"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GEN="${SCRIPT_DIR}/load_test.py"
 
-declare -A ENDPOINTS=(
-  [static]="${STATIC_ASSET_PATH:-/assets/css/app.css}"
-  [top_selling]="/books/top-selling"
-  [search]="/books/search?q=novel"
-  [book_detail]="/books/detail"
-)
+ENDPOINT_STATIC="${STATIC_ASSET_PATH:-/assets/css/app.css}"
+ENDPOINT_TOP_SELLING="/books/top-selling"
+ENDPOINT_SEARCH="/books/search?q=novel"
+ENDPOINT_BOOK_DETAIL="/books/detail"
 
 # Resolve a real book-detail URL from the books index (cheap dynamic read).
 echo "> resolving a book id for the detail endpoint..."
@@ -56,7 +54,7 @@ FIRST_BOOK="$(
     | grep -oE '/books/[a-f0-9]{24}' | head -1 || true
 )"
 if [ -n "$FIRST_BOOK" ]; then
-  ENDPOINTS[book_detail]="${FIRST_BOOK}"
+  ENDPOINT_BOOK_DETAIL="${FIRST_BOOK}"
 else
   echo "! could not resolve a book id; detail endpoint will 404"
 fi
@@ -64,7 +62,14 @@ fi
 echo ">>> load test against ${BASE_URL} (label: ${LABEL})"
 echo ">>> endpoints tested:"
 for key in static top_selling search book_detail; do
-  echo "    ${key}: ${BASE_URL}${ENDPOINTS[$key]}"
+  case "$key" in
+    static) value="$ENDPOINT_STATIC" ;;
+    top_selling) value="$ENDPOINT_TOP_SELLING" ;;
+    search) value="$ENDPOINT_SEARCH" ;;
+    book_detail) value="$ENDPOINT_BOOK_DETAIL" ;;
+    *) value="" ;;
+  esac
+  echo "    ${key}: ${BASE_URL}${value}"
 done
 
 echo ">>> starting metrics capture"
@@ -84,10 +89,18 @@ for key in static top_selling search book_detail; do
     c=$n
     if [ "$c" -gt 50 ]; then c=50; fi
 
+    case "$key" in
+      static) value="$ENDPOINT_STATIC" ;;
+      top_selling) value="$ENDPOINT_TOP_SELLING" ;;
+      search) value="$ENDPOINT_SEARCH" ;;
+      book_detail) value="$ENDPOINT_BOOK_DETAIL" ;;
+      *) value="" ;;
+    esac
+
     SUBDIR="${OUT_ROOT}/${key}"
     mkdir -p "$SUBDIR"
     OUT_PREFIX="${SUBDIR}/${key}_${n}"
-    URL="${BASE_URL}${ENDPOINTS[$key]}"
+    URL="${BASE_URL}${value}"
 
     echo ""
     echo "== ${key} n=${n} c=${c} : ${URL}"

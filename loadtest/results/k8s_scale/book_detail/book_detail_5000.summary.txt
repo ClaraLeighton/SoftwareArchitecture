@@ -1,16 +1,16 @@
-== Load test: https://app.localhost:30443/books/6ab474d65d6379d8c3f6d153 ==
+== Load test: https://app.localhost:30443/books/6ab474c683c6f10bd7744f4b ==
 requests:      5000
 concurrency:   50
-elapsed (s):   10.403
-requests/s:    480.63
-completed:     4991
-ok (<400):     4991
-failed/timeout:9
-bytes total:   56243579
-latency mean:  87.578 ms
-latency median:76.260 ms
-latency p90:    122.944 ms
-latency p95:    144.960 ms
-latency p99:    223.767 ms
-latency max:   1225.824 ms
-status codes:  200=4991
+elapsed (s):   9.471
+requests/s:    527.93
+completed:     5000
+ok (<400):     5000
+failed/timeout:0
+bytes total:   56345000
+latency mean:  82.484 ms
+latency median:74.318 ms
+latency p90:    134.048 ms
+latency p95:    164.605 ms
+latency p99:    221.880 ms
+latency max:   367.239 ms
+status codes:  200=5000
